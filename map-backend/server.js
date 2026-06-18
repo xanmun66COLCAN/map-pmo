@@ -2,21 +2,25 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-
 const pool = require('./config/db');
 
-// IMPORTACIÓN: Traemos el archivo de rutas de autenticación
+// IMPORTACIÓN: Traemos los archivos de rutas
 const authRoutes = require('./routes/authRoutes');
-const iniciativaRoutes = require('./routes/iniciativaRoutes'); // <-- AGREGA ESTA
+const iniciativaRoutes = require('./routes/iniciativaRoutes');
 
 const app = express();
 
-app.use(cors());
+// CONFIGURACIÓN DE CORS: Modificada para darle acceso seguro a tu Frontend de Vite
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
+
 app.use(express.json());
 
-// VINCULACIÓN: Le decimos a Express que todas las rutas de authRoutes comiencen con /api/auth
+// VINCULACIÓN: Rutas de la API
 app.use('/api/auth', authRoutes);
-app.use('/api/iniciativas', iniciativaRoutes); // <-- AGREGA ESTA
+app.use('/api/iniciativas', iniciativaRoutes);
 
 // Ruta de estado general
 app.get('/api/status', async (req, res) => {
@@ -40,5 +44,3 @@ app.listen(PORT, () => {
     console.log(` Servidor de MAP corriendo con éxito en el puerto ${PORT}`);
     console.log(`==================================================`);
 });
-
-require('dotenv').config()
