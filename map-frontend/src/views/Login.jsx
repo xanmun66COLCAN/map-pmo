@@ -1,10 +1,15 @@
 import { useState } from 'react';
+// 1️⃣ IMPORTACIÓN: Traemos el hook de redirección
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 2️⃣ INICIALIZACIÓN: Activamos el enrutador
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,7 +19,6 @@ export default function Login() {
     try {
       const datosAEnviar = { correo: email, contrasena: password };
       
-      // ESPÍA: Esto nos pintará en la consola el objeto real antes de viajar
       console.log("🚀 Datos que están saliendo del Frontend:", datosAEnviar);
 
       const response = await fetch('http://localhost:5000/api/auth/login', {
@@ -28,16 +32,30 @@ export default function Login() {
       const data = await response.json();
 
       if (!response.ok) {
-        // Captura el mensaje de error personalizado que configuraste en tu backend
         throw new Error(data.message || 'Error al iniciar sesión');
       }
 
       // ¡ÉXITO TOTAL!
       console.log('Login Exitoso, Token recibido:', data.token);
-      alert(`¡Bienvenido de nuevo! Rol ID: ${data.usuario.id_rol}`);
       
-      // Guardamos el token de seguridad en el navegador para futuras peticiones
+      // Guardamos el token de seguridad
       localStorage.setItem('token', data.token);
+
+      // Guardamos el objeto completo 'usuario' para que App.jsx pueda leerlo sin problemas
+      if (data.usuario) {
+        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+      }
+
+      // 3️⃣ MEJORA: Tu guardado de rol actual (lo dejamos por si acaso)
+      if (data.usuario && data.usuario.id_rol) {
+        localStorage.setItem('user_role', data.usuario.id_rol);
+      }
+
+      // 🛑 REVISIÓN TEMPORAL: Coloca este alert aquí para ver exactamente qué responde tu base de datos
+      alert("Datos que llegaron del backend: " + JSON.stringify(data));
+
+      // 🚀 REDIRECCIÓN MÁGICA: Empujamos al usuario al dashboard automáticamente
+      navigate('/dashboard');
 
     } catch (err) {
       console.error('Error en la conexión:', err.message);

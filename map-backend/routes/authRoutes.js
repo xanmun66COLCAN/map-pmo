@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../config/db'); // Conexión a la base de datos
 const { encriptarContrasena, compararContrasena, generarToken } = require('../utils/authHelper');
-
+const verificarToken = require('../authMiddleware');
 // ==========================================
 // 1. RUTA DE REGISTRO: POST /api/auth/register
 // ==========================================
@@ -85,6 +85,49 @@ router.post('/login', async (req, res) => {
     } catch (error) {
         console.error("Error en login:", error);
         res.status(500).json({ error: "Error interno del servidor al iniciar sesión." });
+    }
+});
+
+// ==========================================
+// 3. RUTA DE CAMBIO DE CONTRASEÑA: PUT /api/auth/change-password
+// ==========================================
+router.post('/change-password', async (req, res) => {
+    const { correo, contrasenaActual, nuevaContrasena } = req.body;
+
+    try {
+        // 1. Validación básica
+        if (!correo || !contrasenaActual || !nuevaContrasena) {
+            return res.status(400).json({ error: "Todos los campos son obligatorios." });
+        }
+
+        // 2. Buscar al usuario en la base de datos
+        const resultadoDb = await pool.query('SELECT * FROM usuarios WHERE correo = $1', [correo]);
+        if (resultadoDb.rows.length === 0) {
+            return res.status(404).json({ error: "El usuario no existe." });
+        }
+
+        const usuario = resultadoDb.rows[0];
+
+        // 3. Verificar si la contraseña actual es correcta
+        const contrasenaCorrecta = await compararContrasena(contrasenaActual, usuario.contrasena);
+        if (!contrasenaCorrecta) {
+            return res.status(401).json({ error: "La contraseña actual es incorrecta." });
+        }
+
+        // 4. Cifrar la NUEVA contraseña
+        const nuevaContrasenaCifrada = await encriptarContrasena(nuevaContrasena);
+
+        // 5. Actualizar en PostgreSQL
+        await pool.query(
+            'UPDATE usuarios SET contrasena = $1 WHERE id = $2',
+            [nuevaContrasenaCifrada, usuario.id]
+        );
+
+        res.json({ mensaje: "Contraseña actualizada con éxito en MAP PMO." });
+
+    } catch (error) {
+        console.error("Error en cambio de contraseña:", error);
+        res.status(500).json({ error: "Error interno del servidor al cambiar la contraseña." });
     }
 });
 
