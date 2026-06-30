@@ -9,6 +9,7 @@ const authRoutes = require('./routes/authRoutes');
 const iniciativaRoutes = require('./routes/iniciativaRoutes');
 
 const app = express();
+const proyectoRoutes = require('./routes/proyectoRoutes'); // Ajusta la ruta según tu estructura
 
 // CONFIGURACIÓN DE CORS: Modificada para darle acceso seguro a tu Frontend de Vite
 app.use(cors({
@@ -21,7 +22,10 @@ app.use(express.json());
 // VINCULACIÓN: Rutas de la API
 app.use('/api/auth', authRoutes);
 app.use('/api/iniciativas', iniciativaRoutes);
-
+// Middleware fundamental para poder leer archivos JSON en el req.body
+app.use(express.json());
+// Registro de las rutas de la API bajo el prefijo /api
+app.use('/api', proyectoRoutes);
 // Ruta de estado general
 app.get('/api/status', async (req, res) => {
     try {

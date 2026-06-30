@@ -1,20 +1,18 @@
-const { Pool } = require('pg');
+// db.js
+const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_DATABASE,
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
-});
+// Inicializamos el cliente de Prisma
+const pool = new PrismaClient();
 
-pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-        console.error('❌ Error al conectar con PostgreSQL desde db.js:', err.stack);
-    } else {
-        console.log('✅ Conexión interna a PostgreSQL exitosa.');
-    }
-});
+// Verificación de conexión nativa de Prisma
+pool.$connect()
+    .then(() => {
+        console.log('✅ Conexión interna a PostgreSQL exitosa a través de Prisma.');
+    })
+    .catch((err) => {
+        console.error('❌ Error al conectar con PostgreSQL desde db.js con Prisma:', err);
+    });
 
+// Exportamos 'pool' con la instancia de Prisma para no romper los 'require' en tus otros archivos
 module.exports = pool;
