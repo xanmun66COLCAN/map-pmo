@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { getProyectosDashboard } from '../controllers/proyecto.controller';
+import { getProyectosDashboard, createProyecto } from '../controllers/proyecto.controller';
 
 const router = Router();
 
-// Definimos la ruta GET para el listado principal
+// Listado principal (GET)
 router.get('/proyectos', getProyectosDashboard);
+
+// Creación de proyecto (POST)
+router.post('/proyectos', createProyecto);
 
 export default router;
