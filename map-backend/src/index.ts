@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import proyectoRoutes from './routes/proyecto.routes';
+import authRoutes from './routes/auth.routes';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 
 // Rutas de la API
 app.use('/api', proyectoRoutes);
+app.use('/api/auth', authRoutes);
 
 // Ruta de prueba inicial
 app.get('/', (req: Request, res: Response) => {

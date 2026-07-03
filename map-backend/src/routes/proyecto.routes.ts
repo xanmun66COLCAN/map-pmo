@@ -9,4 +9,6 @@ router.get('/proyectos', getProyectosDashboard);
 // Creación de proyecto (POST)
 router.post('/proyectos', createProyecto);
 
+// Inicio de sesión (POST)
+
 export default router;

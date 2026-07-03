@@ -19,7 +19,7 @@ function Login() {
 
     try {
       // Hacemos la petición a tu backend en el puerto 5000
-      const respuesta = await fetch('http://localhost:5000/api/auth/login', {
+      const respuesta = await fetch('http://localhost:5000/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
