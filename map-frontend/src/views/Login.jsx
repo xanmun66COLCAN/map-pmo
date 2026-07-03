@@ -21,7 +21,7 @@ export default function Login() {
       
       console.log("🚀 Datos que están saliendo del Frontend:", datosAEnviar);
 
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch('http://localhost:5000/api/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
