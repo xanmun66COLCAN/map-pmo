@@ -1,5 +1,7 @@
 {
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^26.0.1",
     "nodemon": "^3.1.14",
     "prisma": "^5.22.0",
@@ -7,6 +9,8 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0"
+    "@prisma/client": "^5.22.0",
+    "bcrypt": "^6.0.0",
+    "jsonwebtoken": "^9.0.3"
   }
 }

@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
+import { login } from '../controllers/auth.controller';
 
 const router = Router();
 
-router.post('/login', (req, res) => {
-  res.json({ ok: true, mensaje: "Conectado desde MAP backend" });
-});
+router.post('/login', login);
 
 export default router;
