@@ -35,23 +35,36 @@ export default function Login() {
         throw new Error(data.message || 'Error al iniciar sesión');
       }
 
-      // ¡ÉXITO TOTAL!
-      console.log('Login Exitoso, Token recibido:', data.token);
+      // 🔍 INSPECCIÓN: Esto imprimirá en tu consola la estructura exacta del Backend
+      console.log('🚀 OBJETO COMPLETO RECIBIDO DEL BACKEND:', data);
+
+      // Buscamos el token de forma inteligente por si el backend usa otro nombre
+      const tokenRecibido = data.token || data.accessToken || data.jwt || (data.usuario && data.usuario.token);
       
-      // Guardamos el token de seguridad
-      localStorage.setItem('token', data.token);
+      console.log('Login Exitoso, Token procesado:', tokenRecibido);
+      
+      // Guardamos el token de seguridad si existe
+      if (tokenRecibido) {
+        localStorage.setItem('token', tokenRecibido);
+      } else {
+        console.warn("⚠️ ¡Atención! No se detectó ninguna propiedad de token común en la respuesta.");
+      }
 
       // Guardamos el objeto completo 'usuario' para que App.jsx pueda leerlo sin problemas
       if (data.usuario) {
         localStorage.setItem('usuario', JSON.stringify(data.usuario));
+      } else if (data.user) {
+        // Por si acaso el backend devuelve 'user' en vez de 'usuario'
+        localStorage.setItem('usuario', JSON.stringify(data.user));
       }
 
-      // 3️⃣ MEJORA: Tu guardado de rol actual (lo dejamos por si acaso)
-      if (data.usuario && data.usuario.id_rol) {
-        localStorage.setItem('user_role', data.usuario.id_rol);
+      // Tu guardado de rol actual
+      const usuarioActivo = data.usuario || data.user;
+      if (usuarioActivo && usuarioActivo.id_rol) {
+        localStorage.setItem('user_role', usuarioActivo.id_rol);
       }
 
-      // 🛑 REVISIÓN TEMPORAL: Coloca este alert aquí para ver exactamente qué responde tu base de datos
+      // 🛑 REVISIÓN TEMPORAL: Te mostrará una alerta en Ubuntu con el JSON exacto del backend
       alert("Datos que llegaron del backend: " + JSON.stringify(data));
 
       // 🚀 REDIRECCIÓN MÁGICA: Empujamos al usuario al dashboard automáticamente
