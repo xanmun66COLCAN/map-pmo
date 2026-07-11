@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import { getProyectosDashboard, createProyecto } from '../controllers/proyecto.controller';
+import { getProyectosDashboard, createProyecto } from '../controllers/proyecto.controller'; 
+import verificarToken from '../authMiddleware'; // 👈 Ruta corregida apuntando a la raíz de src
 
 const router = Router();
 
-// Listado principal (GET)
-router.get('/proyectos', getProyectosDashboard);
+// 🔒 Shield protector activado globalmente en este archivo
+router.use(verificarToken);
 
-// Creación de proyecto (POST)
+// Endpoints protegidos
+router.get('/dashboard', getProyectosDashboard);
 router.post('/proyectos', createProyecto);
-
-// Inicio de sesión (POST)
 
 export default router;
