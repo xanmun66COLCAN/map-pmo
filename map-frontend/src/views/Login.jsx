@@ -1,5 +1,4 @@
-import { useState } from 'react';
-// 1️⃣ IMPORTACIÓN: Traemos el hook de redirección
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
@@ -7,9 +6,16 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  // 2️⃣ INICIALIZACIÓN: Activamos el enrutador
   const navigate = useNavigate();
+
+  // 🛡️ PASO 2: Redirección automática si el usuario ya está logueado
+  useEffect(() => {
+    const tokenExistente = localStorage.getItem('token');
+    if (tokenExistente) {
+      console.log("🔒 Token detectado, redirigiendo al Dashboard...");
+      navigate('/dashboard');
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +25,7 @@ export default function Login() {
     try {
       const datosAEnviar = { correo: email, contrasena: password };
       
-      console.log("🚀 Datos que están saliendo del Frontend:", datosAEnviar);
+      console.log("🚀 Enviando credenciales al Backend:", datosAEnviar);
 
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
@@ -35,43 +41,21 @@ export default function Login() {
         throw new Error(data.message || 'Error al iniciar sesión');
       }
 
-      // 🔍 INSPECCIÓN: Esto imprimirá en tu consola la estructura exacta del Backend
-      console.log('🚀 OBJETO COMPLETO RECIBIDO DEL BACKEND:', data);
+      console.log('✅ LOGIN EXITOSO:', data);
 
-      // Buscamos el token de forma inteligente por si el backend usa otro nombre
-      const tokenRecibido = data.token || data.accessToken || data.jwt || (data.usuario && data.usuario.token);
+      // 💾 PASO 1: Almacenamiento seguro del Token y datos estructurados
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('usuario', JSON.stringify(data.usuario));
       
-      console.log('Login Exitoso, Token procesado:', tokenRecibido);
-      
-      // Guardamos el token de seguridad si existe
-      if (tokenRecibido) {
-        localStorage.setItem('token', tokenRecibido);
-      } else {
-        console.warn("⚠️ ¡Atención! No se detectó ninguna propiedad de token común en la respuesta.");
+      if (data.usuario && data.usuario.id_rol) {
+        localStorage.setItem('user_role', data.usuario.id_rol);
       }
 
-      // Guardamos el objeto completo 'usuario' para que App.jsx pueda leerlo sin problemas
-      if (data.usuario) {
-        localStorage.setItem('usuario', JSON.stringify(data.usuario));
-      } else if (data.user) {
-        // Por si acaso el backend devuelve 'user' en vez de 'usuario'
-        localStorage.setItem('usuario', JSON.stringify(data.user));
-      }
-
-      // Tu guardado de rol actual
-      const usuarioActivo = data.usuario || data.user;
-      if (usuarioActivo && usuarioActivo.id_rol) {
-        localStorage.setItem('user_role', usuarioActivo.id_rol);
-      }
-
-      // 🛑 REVISIÓN TEMPORAL: Te mostrará una alerta en Ubuntu con el JSON exacto del backend
-      alert("Datos que llegaron del backend: " + JSON.stringify(data));
-
-      // 🚀 REDIRECCIÓN MÁGICA: Empujamos al usuario al dashboard automáticamente
+      // 🚀 REDIRECCIÓN MÁGICA: Al Dashboard de MAP PMO
       navigate('/dashboard');
 
     } catch (err) {
-      console.error('Error en la conexión:', err.message);
+      console.error('❌ Error en el flujo de autenticación:', err.message);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -82,7 +66,7 @@ export default function Login() {
     <div className="min-h-screen bg-[#0B0A0F] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#13111C] border border-[#2D2845] rounded-2xl p-8 shadow-2xl relative overflow-hidden">
         
-        {/* Efecto decorativo neón de fondo */}
+        {/* Efecto decorativo cyberpunk de fondo */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A855F7]/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#22C55E]/10 rounded-full blur-3xl"></div>
 
@@ -99,7 +83,6 @@ export default function Login() {
         {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-6">
           
-          {/* Alerta de Error Dinámica */}
           {error && (
             <div className="bg-[#EF4444]/15 border border-[#EF4444]/30 text-[#F87171] text-xs p-3 rounded-lg font-medium">
               ⚠️ {error}
