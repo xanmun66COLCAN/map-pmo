@@ -14,8 +14,8 @@ export const getProyectosDashboard = async (req: Request, res: Response): Promis
             usuario: {
               select: {
                 nombre: true,
-                apellido: true,
-                email: true
+                // 🚀 Cambiado de 'email: true' a 'correo: true' para que coincida con el schema.prisma
+                correo: true 
               }
             }
           }
@@ -30,7 +30,6 @@ export const getProyectosDashboard = async (req: Request, res: Response): Promis
 
   } catch (error: any) {
     console.error("🔥 ERROR REAL:", error);
-
     res.status(500).json({
       success: false,
       message: error.message || 'Error interno del servidor al obtener los proyectos',

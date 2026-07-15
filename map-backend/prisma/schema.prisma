@@ -1,63 +1,42 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider = "prisma-client-js"
-}
-
-// 1. ENUMS
-enum EstadoProyecto {
-  Planificacion @map("Planificación")
-  En_Ejecucion  @map("En Ejecución")
-  Pausado
-  Completado
-}
-
-enum FrecuenciaMedicion {
-  Semanal
-  Mensual
-  Trimestral
-}
-
-// 2. MODELO: USUARIOS (Optimizado)
 model Usuario {
-  id           Int                 @id @default(autoincrement())
-  email        String              @unique
-  password     String
-  nombre       String              @db.VarChar(100) // <-- Agregado
-  apellido     String              @db.VarChar(100) // <-- Agregado
-  created_at   DateTime            @default(now())
-  
-  asignaciones   AsignacionRecurso[]
-  historial_kpis HistorialKpi[]      // <-- Agregado para la relación inversa de auditoría
+  id             Int                 @id @default(autoincrement())
+  nombre         String              @db.VarChar(100)
+  correo         String              @unique @db.VarChar(100)
+  contrasena     String              @db.VarChar(255)
+  id_rol         Int?
+  fecha_creacion DateTime?           @default(now()) @db.Timestamp(6)
+  logs_auditoria logs_auditoria[]
+  roles          roles?              @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  asignaciones   AsignacionRecurso[] // 👈 Relación agregada para rastrear en qué proyectos trabaja el usuario
 
-  @@map("usuarios") // <-- Agregado para mantener consistencia en la BD
+  @@map("usuarios")
 }
 
-// 3. MODELO: PROYECTOS
 model Proyecto {
   id           Int                 @id @default(autoincrement())
   nombre       String              @db.VarChar(150)
-  descripcion  String?             @db.Text
+  descripcion  String?
   fecha_inicio DateTime            @db.Date
   fecha_fin    DateTime?           @db.Date
-  estado       EstadoProyecto      @default(Planificacion)
-  presupuesto  Decimal             @default(0.00) @db.Decimal(12, 2)
-  created_at   DateTime            @default(now())
-  updated_at   DateTime            @updatedAt
-
-  kpis         Kpi[]
+  estado       estado_proyecto?    @default(Planificaci_n)
+  presupuesto  Decimal?            @default(0.00) @db.Decimal(12, 2)
+  created_at   DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime?           @default(now()) @updatedAt @db.Timestamptz(6)
   asignaciones AsignacionRecurso[]
+  kpis         Kpi[]
 
   @@map("proyectos")
 }
 
-// 4. MODELO: ASIGNACIÓN DE RECURSOS
 model AsignacionRecurso {
   id                    Int       @id @default(autoincrement())
   proyecto_id           Int
@@ -65,43 +44,71 @@ model AsignacionRecurso {
   porcentaje_asignacion Int
   fecha_desde           DateTime  @db.Date
   fecha_hasta           DateTime? @db.Date
-  created_at            DateTime  @default(now())
+  created_at            DateTime? @default(now()) @db.Timestamptz(6)
+  proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario               Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction) // 👈 ¡ESTA ERA LA LÍNEA CLAVE QUE FALTABA!
 
-  proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
-  usuario               Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-
+  @@index([proyecto_id], map: "idx_asignaciones_proyecto")
+  @@index([usuario_id], map: "idx_asignaciones_usuario")
   @@map("asignacion_recursos")
 }
 
-// 5. MODELO: KPIS
 model Kpi {
-  id            Int                @id @default(autoincrement())
+  id            Int                  @id @default(autoincrement())
   proyecto_id   Int
-  nombre_kpi    String             @db.VarChar(100)
-  descripcion   String?            @db.Text
-  meta_valor    Decimal            @db.Decimal(10, 2)
-  valor_actual  Decimal            @default(0.00) @db.Decimal(10, 2)
-  frecuencia    FrecuenciaMedicion @default(Mensual)
-  unidad_medida String             @db.VarChar(20)
-  created_at    DateTime           @default(now())
-  updated_at    DateTime           @updatedAt
-
-  proyecto      Proyecto           @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  nombre_kpi    String               @db.VarChar(100)
+  descripcion   String?
+  meta_valor    Decimal              @db.Decimal(10, 2)
+  valor_actual  Decimal?             @default(0.00) @db.Decimal(10, 2)
+  frecuencia    frecuencia_medicion? @default(Mensual)
+  unidad_medida String               @db.VarChar(20)
+  created_at    DateTime?            @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
   historial     HistorialKpi[]
+  proyecto      Proyecto             @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
+  @@index([proyecto_id], map: "idx_kpis_proyecto")
   @@map("kpis")
 }
 
-// 6. MODELO: HISTORIAL DE KPIS (Con relación completa)
 model HistorialKpi {
-  id               Int      @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   kpi_id           Int
-  valor_registrado Decimal  @db.Decimal(10, 2)
-  fecha_registro   DateTime @default(now())
-  usuario_id       Int?     // ¿Quién actualizó la métrica?
+  valor_registrado Decimal   @db.Decimal(10, 2)
+  fecha_registro   DateTime? @default(now()) @db.Timestamptz(6)
+  usuario_id       Int?
+  kpi              Kpi       @relation(fields: [kpi_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  kpi              Kpi      @relation(fields: [kpi_id], references: [id], onDelete: Cascade)
-  usuario          Usuario? @relation(fields: [usuario_id], references: [id], onDelete: SetNull) // <-- Relación agregada
-
+  @@index([kpi_id, fecha_registro], map: "idx_historial_kpi")
   @@map("historial_kpis")
+}
+
+model logs_auditoria {
+  id                Int       @id @default(autoincrement())
+  id_proyecto       Int?      // 👈 Cambiado de id_iniciativa a id_proyecto para mantener la coherencia
+  id_usuario_accion Int?
+  campo_modificado  String    @db.VarChar(100)
+  valor_anterior    String?   @db.VarChar(255)
+  valor_nuevo       String?   @db.VarChar(255)
+  fecha_transaccion DateTime? @default(now()) @db.Timestamp(6)
+  usuarios          Usuario?  @relation(fields: [id_usuario_accion], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model roles {
+  id         Int       @id @default(autoincrement())
+  nombre_rol String    @unique @db.VarChar(50)
+  usuarios   Usuario[]
+}
+
+enum estado_proyecto {
+  Planificaci_n @map("Planificación")
+  En_Ejecuci_n  @map("En Ejecución")
+  Pausado
+  Completado
+}
+
+enum frecuencia_medicion {
+  Semanal
+  Mensual
+  Trimestral
 }
