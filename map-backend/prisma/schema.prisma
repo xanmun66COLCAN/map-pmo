@@ -27,7 +27,7 @@ model Proyecto {
   descripcion  String?
   fecha_inicio DateTime            @db.Date
   fecha_fin    DateTime?           @db.Date
-  estado       estado_proyecto?    @default(Planificaci_n)
+  estado       EstadoProyecto?     @default(Idea) // 👈 Apuntando al Enum correcto
   presupuesto  Decimal?            @default(0.00) @db.Decimal(12, 2)
   created_at   DateTime?           @default(now()) @db.Timestamptz(6)
   updated_at   DateTime?           @default(now()) @updatedAt @db.Timestamptz(6)
@@ -100,11 +100,13 @@ model roles {
   usuarios   Usuario[]
 }
 
-enum estado_proyecto {
-  Planificaci_n @map("Planificación")
-  En_Ejecuci_n  @map("En Ejecución")
-  Pausado
-  Completado
+// Cambiado de 'estado_proyecto' a 'EstadoProyecto' para coincidir perfectamente
+enum EstadoProyecto {
+  Idea
+  Evaluacion
+  Caso_de_Negocio
+  Aprobado
+  Rechazado
 }
 
 enum frecuencia_medicion {

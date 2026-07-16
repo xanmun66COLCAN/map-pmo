@@ -2,8 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const { crearProyecto } = require('../controllers/proyectoController');
+const { verificarToken } = require('../middlewares/authMiddleware'); // Si usas JWT
 
-// Definición del endpoint POST
-router.post('/proyectos', crearProyecto);
+// Ruta para crear un proyecto (asociada al formulario)
+router.post('/', verificarToken, crearProyecto);
+
+// Ruta para obtener todos los proyectos (asociada a la vista del Dashboard)
+router.get('/', verificarToken, obtenerProyectos);
 
 module.exports = router;
