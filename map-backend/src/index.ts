@@ -18,7 +18,9 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 
 // 🔒 2. Rutas de la API de Proyectos (PROTEGIDAS - Requieren Token)
-app.use('/api', proyectoRoutes);
+// app.use('/api', proyectoRoutes);
+app.use('/api/proyectos', proyectoRoutes);
+
 
 // Ruta de prueba inicial para verificar el estado del servidor
 app.get('/', (req: Request, res: Response) => {

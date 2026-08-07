@@ -16,37 +16,45 @@ model Usuario {
   fecha_creacion DateTime?           @default(now()) @db.Timestamp(6)
   logs_auditoria logs_auditoria[]
   roles          roles?              @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  asignaciones   AsignacionRecurso[] // 👈 Relación agregada para rastrear en qué proyectos trabaja el usuario
+  asignaciones   AsignacionRecurso[]
 
   @@map("usuarios")
 }
 
 model Proyecto {
-  id           Int                 @id @default(autoincrement())
-  nombre       String              @db.VarChar(150)
-  descripcion  String?
-  fecha_inicio DateTime            @db.Date
-  fecha_fin    DateTime?           @db.Date
-  estado       EstadoProyecto?     @default(Idea) // 👈 Apuntando al Enum correcto
-  presupuesto  Decimal?            @default(0.00) @db.Decimal(12, 2)
-  created_at   DateTime?           @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime?           @default(now()) @updatedAt @db.Timestamptz(6)
-  asignaciones AsignacionRecurso[]
-  kpis         Kpi[]
+  id                String              @id @default(uuid())
+  nombre            String
+  descripcion       String?
+  estado            EstadoProyecto      @default(Caso_de_Negocio)
+  fecha_inicio      DateTime
+  fecha_fin         DateTime?
+  presupuesto       Decimal?            @db.Decimal(12, 2)
+  costo_real        Decimal?            @db.Decimal(12, 2)
+  porcentaje_avance Float?              @default(0)
+  departamento      String?
+  lider_proyecto    String?
+
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @updatedAt @db.Timestamptz(6)
+
+  asignaciones      AsignacionRecurso[]
+  kpis              Kpi[]
 
   @@map("proyectos")
 }
 
 model AsignacionRecurso {
   id                    Int       @id @default(autoincrement())
-  proyecto_id           Int
+  proyecto_id           String    // 👈 Tipo String para coincidir con Proyecto.id (uuid)
   usuario_id            Int
-  porcentaje_asignacion Int
-  fecha_desde           DateTime  @db.Date
+  porcentaje_asignacion Int?      @default(100)
+  rol                   String?
+  fecha_desde           DateTime? @db.Date
   fecha_hasta           DateTime? @db.Date
   created_at            DateTime? @default(now()) @db.Timestamptz(6)
+
   proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  usuario               Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction) // 👈 ¡ESTA ERA LA LÍNEA CLAVE QUE FALTABA!
+  usuario               Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([proyecto_id], map: "idx_asignaciones_proyecto")
   @@index([usuario_id], map: "idx_asignaciones_usuario")
@@ -55,15 +63,16 @@ model AsignacionRecurso {
 
 model Kpi {
   id            Int                  @id @default(autoincrement())
-  proyecto_id   Int
+  proyecto_id   String               // 👈 Tipo String para coincidir con Proyecto.id (uuid)
   nombre_kpi    String               @db.VarChar(100)
   descripcion   String?
-  meta_valor    Decimal              @db.Decimal(10, 2)
+  meta_valor    Decimal?             @db.Decimal(10, 2)
   valor_actual  Decimal?             @default(0.00) @db.Decimal(10, 2)
   frecuencia    frecuencia_medicion? @default(Mensual)
-  unidad_medida String               @db.VarChar(20)
+  unidad_medida String?              @db.VarChar(20)
   created_at    DateTime?            @default(now()) @db.Timestamptz(6)
   updated_at    DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
+
   historial     HistorialKpi[]
   proyecto      Proyecto             @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
@@ -85,7 +94,7 @@ model HistorialKpi {
 
 model logs_auditoria {
   id                Int       @id @default(autoincrement())
-  id_proyecto       Int?      // 👈 Cambiado de id_iniciativa a id_proyecto para mantener la coherencia
+  id_proyecto       String?   // 👈 Coincide con Proyecto.id
   id_usuario_accion Int?
   campo_modificado  String    @db.VarChar(100)
   valor_anterior    String?   @db.VarChar(255)
@@ -100,13 +109,16 @@ model roles {
   usuarios   Usuario[]
 }
 
-// Cambiado de 'estado_proyecto' a 'EstadoProyecto' para coincidir perfectamente
 enum EstadoProyecto {
   Idea
   Evaluacion
   Caso_de_Negocio
   Aprobado
+  En_Ejecucion
+  En_Pausa
+  Completado
   Rechazado
+  Cancelado
 }
 
 enum frecuencia_medicion {

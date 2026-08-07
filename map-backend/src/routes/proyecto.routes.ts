@@ -1,18 +1,24 @@
 import { Router } from 'express';
 import { 
   getProyectosDashboard, 
-  createProyecto, 
-  getProyectoById // 👈 Importar nuevo controlador
+  getProyectos,
+  crearProyecto, 
+  getProyectoById,
+  updateProyecto,
+  deleteProyecto
 } from '../controllers/proyecto.controller'; 
-import verificarToken from '../authMiddleware';
+import verificarToken from '../middlewares/auth.middleware';
 
 const router = Router();
 
+// 🔒 Aplicar autenticación JWT a todas las rutas
 router.use(verificarToken);
 
-// Endpoints
 router.get('/dashboard', getProyectosDashboard);
-router.get('/proyectos/:id', getProyectoById); // 👈 Nueva ruta de detalle
-router.post('/proyectos', createProyecto);
+router.get('/', getProyectos);
+router.post('/', crearProyecto);
+router.get('/:id', getProyectoById);
+router.put('/:id', updateProyecto);
+router.delete('/:id', deleteProyecto);
 
 export default router;

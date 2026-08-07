@@ -1,0 +1,121 @@
+### Variables Globales
+@baseUrl = http://127.0.0.1:5000/api
+@contentType = application/json
+
+###############################################
+# 1. AUTENTICACIÓN
+###############################################
+
+# @name login
+POST http://127.0.0.1:5000/api/auth/login
+Content-Type: application/json
+
+{
+  "correo": "admin@map-pmo.com",
+  "contrasena": "Password123!"
+}
+
+###
+
+# Capturar el token de la respuesta
+@authToken = {{login.response.body.token}}
+
+###############################################
+# 2. DASHBOARD (Probar con la variable)
+###############################################
+
+GET http://127.0.0.1:5000/api/proyectos/dashboard
+Authorization: Bearer {{authToken}}
+
+###############################################
+# 3. GESTIÓN DE PROYECTOS (CRUD)
+###############################################
+
+### A. Listar todos los proyectos
+GET {{baseUrl}}/proyectos
+Authorization: Bearer {{authToken}}
+
+###
+
+### B. Crear un nuevo proyecto
+# @name crearProyecto
+POST {{baseUrl}}/proyectos
+Authorization: Bearer {{authToken}}
+Content-Type: {{contentType}}
+
+{
+  "nombre": "Implementación Sistema ERP - Fase 1",
+  "descripcion": "Migración e integración de módulos financieros y logística a la nube.",
+  "fecha_inicio": "2026-09-01",
+  "fecha_fin": "2026-12-15",
+  "presupuesto": 45000.00,
+  "costo_real": 5000.00,
+  "porcentaje_avance": 10,
+  "departamento": "Tecnología e Informática",
+  "lider_proyecto": "Alexander Muñoz",
+  "estado": "Planificacion"
+}
+
+###
+
+# Capturar el ID asignado por PostgreSQL
+@proyectoId = {{crearProyecto.response.body.data.id}}
+
+
+### C. Consultar detalle de un proyecto por ID
+GET http://127.0.0.1:5000/api/proyectos/cefbc3ef-1e33-4833-8636-b12fba7c13f9
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjoyLCJjb3JyZW8iOiJhZG1pbkBtYXAtcG1vLmNvbSIsImlkX3JvbCI6MSwiaWF0IjoxNzg2MTA2NzIxLCJleHAiOjE3ODYxMzU1MjF9.DhtHAHYiY1c_3yoFS-NUg_csDy5AU_huNxbuKCr9_iM
+
+###
+
+### D. Actualizar avance y costo real del proyecto
+### Actualizar Proyecto por ID
+PUT http://127.0.0.1:5000/api/proyectos/cefbc3ef-1e33-4833-8636-b12fba7c13f9
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjoyLCJjb3JyZW8iOiJhZG1pbkBtYXAtcG1vLmNvbSIsImlkX3JvbCI6MSwiaWF0IjoxNzg2MTA2NzIxLCJleHAiOjE3ODYxMzU1MjF9.DhtHAHYiY1c_3yoFS-NUg_csDy5AU_huNxbuKCr9_iM
+Content-Type: application/json
+
+{
+  "nombre": "Implementación Sistema ERP - Fase 1 (Actualizado)",
+  "descripcion": "Migración e integración de módulos financieros y logística a la nube - En proceso.",
+  "estado": "En_Ejecucion",
+  "porcentaje_avance": 35,
+  "costo_real": 12500.00
+}
+
+###
+
+### E. Eliminar el proyecto por su ID
+### Eliminar Proyecto por ID
+DELETE http://127.0.0.1:5000/api/proyectos/cefbc3ef-1e33-4833-8636-b12fba7c13f9
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjoyLCJjb3JyZW8iOiJhZG1pbkBtYXAtcG1vLmNvbSIsImlkX3JvbCI6MSwiaWF0IjoxNzg2MTA2NzIxLCJleHAiOjE3ODYxMzU1MjF9.DhtHAHYiY1c_3yoFS-NUg_csDy5AU_huNxbuKCr9_iM
+
+###
+
+
+###############################################
+# 4. PRUEBAS DE SEGURIDAD Y VALIDACIÓN
+###############################################
+
+### Intento 1: Crear proyecto sin nombre (Debe retornar 400 Bad Request)
+# @name crearProyecto
+POST http://127.0.0.1:5000/api/proyectos
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZF91c3VhcmlvIjoyLCJjb3JyZW8iOiJhZG1pbkBtYXAtcG1vLmNvbSIsImlkX3JvbCI6MSwiaWF0IjoxNzg2MTA2NzIxLCJleHAiOjE3ODYxMzU1MjF9.DhtHAHYiY1c_3yoFS-NUg_csDy5AU_huNxbuKCr9_iM
+Content-Type: application/json
+
+{
+  "nombre": "Implementación Sistema ERP - Fase 1",
+  "descripcion": "Migración e integración de módulos financieros y logística a la nube.",
+  "fecha_inicio": "2026-09-01",
+  "fecha_fin": "2026-12-15",
+  "presupuesto": 45000.00,
+  "costo_real": 5000.00,
+  "porcentaje_avance": 10,
+  "departamento": "Tecnología e Informática",
+  "lider_proyecto": "Alexander Muñoz",
+  "estado": "Aprobado"
+}
+
+###
+
+### Intento 2: Acceso sin Token JWT (Debe retornar 401 Unauthorized)
+GET {{baseUrl}}/proyectos/dashboard
