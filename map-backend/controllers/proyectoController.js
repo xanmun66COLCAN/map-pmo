@@ -12,8 +12,6 @@ export const crearProyecto = async (req: Request, res: Response): Promise<void> 
       fecha_inicio,
       fecha_fin,
       presupuesto,
-      costo_real,
-      porcentaje_avance,
       departamento,
       lider_proyecto,
       estado,
@@ -36,10 +34,6 @@ export const crearProyecto = async (req: Request, res: Response): Promise<void> 
         fecha_inicio: new Date(fecha_inicio),
         fecha_fin: fecha_fin ? new Date(fecha_fin) : null,
         presupuesto: presupuesto ? parseFloat(presupuesto) : 0.00,
-        costo_real: costo_real ? parseFloat(costo_real) : null,
-        porcentaje_avance: porcentaje_avance ? parseFloat(porcentaje_avance) : 0,
-        departamento,
-        lider_proyecto,
         estado: (estado as EstadoProyecto) || EstadoProyecto.Caso_de_Negocio,
       },
     });
@@ -59,13 +53,13 @@ export const crearProyecto = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-// 🔍 GET: Obtener el detalle completo de un proyecto por ID (UUID)
+// 🔍 GET: Obtener el detalle completo de un proyecto por ID
 export const getProyectoById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params; // Mantenemos el ID como string (UUID)
+    const { id } = req.params;
 
     const proyecto = await prisma.proyecto.findUnique({
-      where: { id }, // 👈 Corregido: sin Number(id)
+      where: { id: Number(id) }, // Convertimos a Number si el schema usa Int autoincrementable
       include: {
         kpis: {
           include: {
@@ -103,6 +97,52 @@ export const getProyectoById = async (req: Request, res: Response): Promise<void
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor al consultar la iniciativa.',
+      error: error.message,
+    });
+  }
+};
+
+// 📊 GET: Obtener métricas y KPIs del Dashboard
+export const getDashboardStats = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const agregadoPresupuesto = await prisma.proyecto.aggregate({
+      _sum: {
+        presupuesto: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const conteoPorEstado = await prisma.proyecto.groupBy({
+      by: ['estado'],
+      _count: {
+        estado: true,
+      },
+    });
+
+    const distribucionEstados = conteoPorEstado.reduce((acc, curr) => {
+      const claveEstado = curr.estado || 'DESCONOCIDO';
+      acc[claveEstado] = curr._count.estado;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const totalPresupuesto = Number(agregadoPresupuesto._sum?.presupuesto || 0);
+    const totalProyectos = agregadoPresupuesto._count?.id || 0;
+
+    res.json({
+      success: true,
+      data: {
+        totalProyectos,
+        totalPresupuesto,
+        distribucionEstados,
+      },
+    });
+  } catch (error: any) {
+    console.error("❌ Error al obtener estadísticas:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al consultar las estadísticas.',
       error: error.message,
     });
   }
