@@ -39,39 +39,58 @@ export const getProyectosDashboard = async (req: Request, res: Response): Promis
 };
 
 
-// ➕ CREATE: Crear proyecto
+// ➕ CREATE: Crear proyecto / iniciativa
 export const createProyecto = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { nombre, descripcion, fechaInicio, fechaFin, kpis } = req.body;
+    // Soportamos tanto camelCase como snake_case desde el frontend
+    const { 
+      nombre, 
+      descripcion, 
+      fechaInicio, 
+      fecha_inicio, 
+      fechaFin, 
+      fecha_fin, 
+      presupuesto, 
+      estado, 
+      kpis 
+    } = req.body;
 
-    // Validación básica
+    // 1. Validación básica
     if (!nombre) {
       res.status(400).json({
         success: false,
-        message: 'El nombre del proyecto es obligatorio.'
+        message: 'El nombre del proyecto o iniciativa es obligatorio.'
       });
       return;
     }
 
+    // Resolver las fechas correctamente
+    const fechaInicioValida = fecha_inicio || fechaInicio;
+    const fechaFinValida = fecha_fin || fechaFin;
+
+    // 2. Creación en PostgreSQL vía Prisma
     const nuevoProyecto = await prisma.proyecto.create({
       data: {
         nombre,
-        descripcion,
-        fecha_inicio: fechaInicio ? new Date(fechaInicio) : new Date(),
-        fecha_fin: fechaFin ? new Date(fechaFin) : new Date(),
-
+        descripcion: descripcion || '',
+        fecha_inicio: fechaInicioValida ? new Date(fechaInicioValida) : new Date(),
+        fecha_fin: fechaFinValida ? new Date(fechaFinValida) : null,
+        presupuesto: presupuesto ? Number(presupuesto) : 0,
+        // Si no se especifica estado, entra por defecto como 'Idea' segun regla de PMO
+        estado: estado || 'Idea',
         kpis: kpis && kpis.length > 0
           ? {
               create: kpis.map((kpi: any) => ({
-                nombre_kpi: kpi.nombre,
-                meta_valor: kpi.valorObjetivo,
-                unidad_medida: kpi.unidadMedida || 'Porcentaje'
+                nombre_kpi: kpi.nombre || kpi.nombre_kpi,
+                meta_valor: kpi.valorObjetivo || kpi.meta_valor || 0,
+                unidad_medida: kpi.unidadMedida || kpi.unidad_medida || '%'
               }))
             }
           : undefined
       },
       include: {
-        kpis: true
+        kpis: true,
+        asignaciones: true
       }
     });
 

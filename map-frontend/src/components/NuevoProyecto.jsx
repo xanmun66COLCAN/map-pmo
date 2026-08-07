@@ -7,7 +7,7 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
     fecha_inicio: '',
     fecha_fin: '',
     presupuesto: '',
-    estado: 'Planificacion'
+    estado: 'Idea' // 👈 Alineado con el Enum 'EstadoProyecto' de Prisma
   });
   
   const [error, setError] = useState('');
@@ -28,7 +28,7 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
     setError('');
     setLoading(true);
 
-    // Validación básica en el frontend antes de enviar
+    // Validación básica en el frontend
     if (!formData.nombre || !formData.fecha_inicio) {
       setError('El nombre y la fecha de inicio son obligatorios.');
       setLoading(false);
@@ -36,35 +36,37 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
     }
 
     try {
-      // Obtenemos el token JWT guardado en el login
       const token = localStorage.getItem('token');
 
       const response = await fetch('http://localhost:5000/api/proyectos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Por si tu endpoint requiere token
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(formData)
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al crear el proyecto');
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || data.error || 'Error al crear el proyecto');
       }
 
-      // Éxito: avisamos al Dashboard para que recargue la lista, limpiamos y cerramos
-      onProyectoCreado(data.proyecto);
+      // 👈 Se extrae 'data.data' que contiene el objeto creado por Prisma
+      onProyectoCreado(data.data);
+
+      // Limpieza del estado y cierre del modal
       setFormData({
         nombre: '',
         descripcion: '',
         fecha_inicio: '',
         fecha_fin: '',
         presupuesto: '',
-        estado: 'Planificacion'
+        estado: 'Idea'
       });
       onClose();
+
     } catch (err) {
       setError(err.message);
     } finally {
@@ -73,27 +75,33 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-50">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-[#1e1e24] border border-gray-800 rounded-lg max-w-lg w-full p-6 shadow-2xl text-gray-200">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-[#8b5cf6]">Nueva Iniciativa PMO</h2>
+        
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6 border-b border-gray-800 pb-3">
+          <h2 className="text-xl font-bold text-[#8b5cf6]">📋 Nueva Iniciativa PMO</h2>
           <button 
             onClick={onClose} 
-            className="text-gray-400 hover:text-white transition-colors text-xl"
+            className="text-gray-400 hover:text-white transition-colors text-xl font-bold"
           >
             &times;
           </button>
         </div>
 
+        {/* Alerta de Error */}
         {error && (
-          <div className="bg-red-900 bg-opacity-40 border border-red-700 text-red-200 px-4 py-2 rounded mb-4 text-sm">
+          <div className="bg-red-900/40 border border-red-700 text-red-200 px-4 py-2 rounded mb-4 text-sm">
             ⚠️ {error}
           </div>
         )}
 
+        {/* Formulario */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Nombre del Proyecto *</label>
+            <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">
+              Nombre del Proyecto / Iniciativa *
+            </label>
             <input
               type="text"
               name="nombre"
@@ -106,19 +114,23 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Descripción</label>
+            <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">
+              Descripción del Alcance
+            </label>
             <textarea
               name="descripcion"
               value={formData.descripcion}
               onChange={handleChange}
               className="w-full bg-[#121214] border border-gray-700 rounded p-2 text-white focus:outline-none focus:border-[#22c55e] transition-colors h-20 resize-none"
-              placeholder="Breve resumen del alcance..."
+              placeholder="Breve resumen del alcance o problema a resolver..."
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Fecha Inicio *</label>
+              <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">
+                Fecha Inicio *
+              </label>
               <input
                 type="date"
                 name="fecha_inicio"
@@ -129,7 +141,9 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Fecha Fin</label>
+              <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">
+                Fecha Fin (Opcional)
+              </label>
               <input
                 type="date"
                 name="fecha_fin"
@@ -142,7 +156,9 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Presupuesto (USD)</label>
+              <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">
+                Presupuesto (USD)
+              </label>
               <input
                 type="number"
                 name="presupuesto"
@@ -150,26 +166,30 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
                 onChange={handleChange}
                 className="w-full bg-[#121214] border border-gray-700 rounded p-2 text-white focus:outline-none focus:border-[#22c55e] transition-colors"
                 placeholder="0.00"
-                step="0.01"
+                step="500"
+                min="0"
               />
             </div>
             <div>
-                <label className="block text-xs font-semibold uppercase text-[#A855F7] mb-1">Fase de la Iniciativa</label>
-                <select
-                    name="estado"
-                    value={formData.estado}
-                    onChange={handleChange}
-                    className="w-full bg-[#121214] border border-[#2D2845] rounded p-2 text-white focus:outline-none focus:border-[#22c55e] transition-colors"
-                >
-                    <option value="Idea">💡 Idea / Propuesta</option>
-                    <option value="Evaluacion">🔍 En Evaluación PMO</option>
-                    <option value="Caso_de_Negocio">📊 Caso de Negocio (Soporte)</option>
-                    <option value="Aprobado">✅ Aprobada (Priorizada)</option>
-                    <option value="Rechazado">❌ No Viable</option>
-                </select>
+              <label className="block text-xs font-semibold uppercase text-[#A855F7] mb-1">
+                Fase de la Iniciativa
+              </label>
+              <select
+                name="estado"
+                value={formData.estado}
+                onChange={handleChange}
+                className="w-full bg-[#121214] border border-[#2D2845] rounded p-2 text-white focus:outline-none focus:border-[#22c55e] transition-colors"
+              >
+                <option value="Idea">💡 Idea / Propuesta</option>
+                <option value="Evaluacion">🔍 En Evaluación PMO</option>
+                <option value="Caso_de_Negocio">📊 Caso de Negocio (Soporte)</option>
+                <option value="Aprobado">✅ Aprobada (Priorizada)</option>
+                <option value="Rechazado">❌ No Viable</option>
+              </select>
             </div>
           </div>
 
+          {/* Footer del Modal */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-800">
             <button
               type="button"
@@ -181,13 +201,14 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold rounded text-sm transition-colors"
+              className="px-4 py-2 bg-[#22c55e] hover:bg-[#16a34a] text-black font-semibold rounded text-sm transition-colors shadow-md disabled:opacity-50"
               disabled={loading}
             >
-              {loading ? 'Guardando...' : 'Crear Proyecto'}
+              {loading ? 'Guardando...' : 'Radicar Iniciativa'}
             </button>
           </div>
         </form>
+
       </div>
     </div>
   );
