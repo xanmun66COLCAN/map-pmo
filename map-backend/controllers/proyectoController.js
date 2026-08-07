@@ -41,3 +41,57 @@ const crearProyecto = async (req, res) => {
 module.exports = {
     crearProyecto
 };
+
+// 🔍 GET: Obtener el detalle completo de un proyecto por ID
+export const getProyectoById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const proyecto = await prisma.proyecto.findUnique({
+      where: { id: Number(id) },
+      include: {
+        kpis: {
+          include: {
+            historial: true
+          }
+        },
+        asignaciones: {
+          include: {
+            usuario: {
+              select: {
+                id: true,
+                nombre: true,
+                correo: true
+              }
+            }
+          }
+        },
+        logs_auditoria: {
+          take: 5,
+          orderBy: { fecha_transaccion: 'desc' }
+        }
+      }
+    });
+
+    if (!proyecto) {
+      res.status(404).json({
+        success: false,
+        message: 'La iniciativa solicitada no existe.'
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: proyecto
+    });
+
+  } catch (error: any) {
+    console.error("❌ Error al obtener el detalle del proyecto:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al consultar la iniciativa.',
+      error: error.message
+    });
+  }
+};

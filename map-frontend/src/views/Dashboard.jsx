@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import NuevoProyecto from '../components/NuevoProyecto'; // Asegúrate de que la ruta sea correcta
+import NuevoProyecto from '../components/NuevoProyecto';
 
 const Dashboard = () => {
   const [proyectos, setProyectos] = useState([]);
@@ -31,13 +31,11 @@ const Dashboard = () => {
       });
 
       const data = await response.json();
-      console.log("📡 Datos crudos que llegaron del backend al Dashboard:", data);
 
       if (!response.ok) {
         throw new Error(data.error || data.message || 'Error al obtener proyectos del servidor');
       }
 
-      // Tu lógica de validación de arreglos impecable:
       if (Array.isArray(data)) {
         setProyectos(data);
       } else if (data && Array.isArray(data.data)) {
@@ -71,7 +69,6 @@ const Dashboard = () => {
     navigate('/');
   };
 
-  // Esta función inserta el proyecto recién creado arriba en el estado sin recargar la página entera
   const handleProyectoCreado = (nuevoProyecto) => {
     setProyectos((prevProyectos) => [nuevoProyecto, ...prevProyectos]);
   };
@@ -95,7 +92,6 @@ const Dashboard = () => {
           </div>
           
           <div className="flex gap-3">
-            {/* El botón estrella de "+ Nueva Iniciativa" */}
             <button
               onClick={() => setIsModalOpen(true)}
               className="text-xs bg-gradient-to-r from-[#A855F7] to-[#7C3AED] hover:from-[#9333EA] hover:to-[#6D28D9] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-lg hover:shadow-purple-500/20"
@@ -130,41 +126,42 @@ const Dashboard = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {proyectos.map((proyecto) => (
-                <div 
+              <div 
                 key={proyecto.id} 
-                className="relative bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg hover:border-[#A855F7]/50 transition-all duration-300 overflow-hidden"
-                >
-                {/* Etiqueta superior de "Iniciativa" */}
+                onClick={() => navigate(`/proyectos/${proyecto.id}`)}
+                className="cursor-pointer relative bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg hover:border-[#A855F7]/80 hover:scale-[1.01] transition-all duration-300 overflow-hidden"
+              >
+                {/* Etiqueta superior */}
                 <div className="absolute top-0 left-0 bg-[#A855F7]/10 text-[#A855F7] border-b border-r border-[#2D2845] text-[9px] uppercase font-bold tracking-widest px-3 py-1 rounded-br-lg">
-                    📋 Nueva Iniciativa
+                  📋 Nueva Iniciativa
                 </div>
 
                 <div className="mt-4">
-                    <h3 className="text-lg font-bold text-white mb-2">{proyecto.nombre}</h3>
-                    <p className="text-xs text-[#94A3B8] line-clamp-3 mb-4">
+                  <h3 className="text-lg font-bold text-white mb-2">{proyecto.nombre}</h3>
+                  <p className="text-xs text-[#94A3B8] line-clamp-3 mb-4">
                     {proyecto.descripcion || 'Sin descripción.'}
-                    </p>
+                  </p>
                 </div>
 
                 <div className="flex justify-between items-center text-[10px] uppercase font-semibold tracking-wider pt-4 border-t border-[#2D2845]">
-                    <span className="text-[#94A3B8]">Código: {proyecto.codigo || 'N/A'}</span>
-                    
-                    {/* Badge dinámico según el estado de evaluación */}
-                    <span className={`px-2.5 py-0.5 rounded-full border ${
+                  <span className="text-[#94A3B8]">Código: {proyecto.codigo || 'N/A'}</span>
+                  
+                  {/* Badge dinámico según el estado */}
+                  <span className={`px-2.5 py-0.5 rounded-full border ${
                     proyecto.estado === 'Aprobado' ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30' :
                     proyecto.estado === 'Evaluacion' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
                     proyecto.estado === 'Caso_de_Negocio' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
                     proyecto.estado === 'Rechazado' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
-                    'bg-gray-500/10 text-gray-400 border-gray-500/30' // Para estado "Idea"
-                    }`}>
+                    'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                  }`}>
                     {proyecto.estado === 'Caso_de_Negocio' ? 'Caso de Negocio' : 
                     proyecto.estado === 'Evaluacion' ? 'En Evaluación' : 
                     proyecto.estado || 'Idea'}
-                    </span>
+                  </span>
                 </div>
-                </div>
+              </div>
             ))}
-            </div>
+          </div>
         )}
 
       </div>

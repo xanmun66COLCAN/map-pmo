@@ -109,3 +109,32 @@ export const createProyecto = async (req: Request, res: Response): Promise<void>
     });
   }
 };
+
+export const getProyectoById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    const idNumero = Number(id);
+    if (isNaN(idNumero)) {
+      return res.status(400).json({ error: 'El ID del proyecto no es válido' });
+    }
+
+    const proyecto = await prisma.proyecto.findUnique({
+      where: { id: idNumero }
+    });
+
+    if (!proyecto) {
+      return res.status(404).json({ error: 'Proyecto no encontrado' });
+    }
+
+    // ⬇️ Deshabilita el cache para asegurar siempre un status 200 con JSON fresco
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
+    return res.status(200).json(proyecto);
+  } catch (error: any) {
+    console.error('❌ Error al obtener el proyecto por ID:', error);
+    return res.status(500).json({ error: 'Error interno del servidor' });
+  }
+};
