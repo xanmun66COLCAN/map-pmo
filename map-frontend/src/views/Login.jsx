@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import api from '../api/axiosInstance';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  // 🛡️ PASO 2: Redirección automática si el usuario ya está logueado
+  const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
+
+  // 🛡️ Redirección única y centralizada cuando el AuthContext confirma la sesión
   useEffect(() => {
-    const tokenExistente = localStorage.getItem('token');
-    if (tokenExistente) {
-      console.log("🔒 Token detectado, redirigiendo al Dashboard...");
-      navigate('/dashboard');
+    if (isAuthenticated) {
+      console.log("🔒 Sesión activa confirmada en AuthContext, redirigiendo a /dashboard...");
+      navigate('/dashboard', { replace: true });
     }
-  }, [navigate]);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,40 +27,35 @@ export default function Login() {
 
     try {
       const datosAEnviar = { correo: email, contrasena: password };
-      
-      console.log("🚀 Enviando credenciales al Backend:", datosAEnviar);
+      console.log("🚀 Enviando credenciales al Backend vía Axios:", datosAEnviar);
 
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(datosAEnviar),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
-      }
+      const response = await api.post('/auth/login', datosAEnviar);
+      const data = response.data;
 
       console.log('✅ LOGIN EXITOSO:', data);
 
-      // 💾 PASO 1: Almacenamiento seguro del Token y datos estructurados
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('usuario', JSON.stringify(data.usuario));
-      
-      if (data.usuario && data.usuario.id_rol) {
-        localStorage.setItem('user_role', data.usuario.id_rol);
+      const tokenAGuardar = data.token || data.accessToken || data.jwt;
+      const usuarioAGuardar = data.usuario || data.user;
+
+      if (!tokenAGuardar || !usuarioAGuardar) {
+        throw new Error('La respuesta del servidor no incluyó un token o usuario válido.');
       }
 
-      // 🚀 REDIRECCIÓN MÁGICA: Al Dashboard de MAP PMO
-      navigate('/dashboard');
+      // 1. Guardar primero en localStorage de forma sincrónica
+      localStorage.setItem('token', tokenAGuardar);
+      localStorage.setItem('usuario', JSON.stringify(usuarioAGuardar));
+      if (usuarioAGuardar.id_rol) {
+        localStorage.setItem('user_role', String(usuarioAGuardar.id_rol));
+      }
+
+      // 2. Disparar el login en AuthContext.
+      // El useEffect de arriba detectará cuando `isAuthenticated` pase a true y redirigirá de forma limpia.
+      login(tokenAGuardar, usuarioAGuardar);
 
     } catch (err) {
-      console.error('❌ Error en el flujo de autenticación:', err.message);
-      setError(err.message);
-    } finally {
+      console.error('❌ Error en el flujo de autenticación:', err);
+      const mensajeServer = err.response?.data?.message || err.response?.data?.error || err.message;
+      setError(mensajeServer || 'Error de conexión con el servidor.');
       setLoading(false);
     }
   };
@@ -66,9 +64,9 @@ export default function Login() {
     <div className="min-h-screen bg-[#0B0A0F] flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-[#13111C] border border-[#2D2845] rounded-2xl p-8 shadow-2xl relative overflow-hidden">
         
-        {/* Efecto decorativo cyberpunk de fondo */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A855F7]/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#22C55E]/10 rounded-full blur-3xl"></div>
+        {/* Efecto decorativo de fondo */}
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A855F7]/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#22C55E]/10 rounded-full blur-3xl pointer-events-none"></div>
 
         {/* Encabezado */}
         <div className="text-center mb-8">

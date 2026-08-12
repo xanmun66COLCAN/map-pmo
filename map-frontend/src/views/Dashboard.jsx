@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NuevoProyecto from '../components/NuevoProyecto';
+import api from '../api/axiosInstance';
 
 const Dashboard = () => {
   const [proyectos, setProyectos] = useState([]);
@@ -12,56 +13,48 @@ const Dashboard = () => {
   const usuarioString = localStorage.getItem('usuario');
   const usuario = usuarioString ? JSON.parse(usuarioString) : null;
 
-  const cargarProyectos = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      console.warn("⚠️ Sin token activo. Redirigiendo al Login...");
-      navigate('/');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const response = await fetch('http://localhost:5000/api/dashboard', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || 'Error al obtener proyectos del servidor');
-      }
-
-      if (Array.isArray(data)) {
-        setProyectos(data);
-      } else if (data && Array.isArray(data.data)) {
-        setProyectos(data.data);
-      } else if (data && Array.isArray(data.proyectos)) {
-        setProyectos(data.proyectos);
-      } else {
-        console.warn("⚠️ La respuesta del API no es un arreglo válido:", data);
-        setProyectos([]);
-      }
-
-    } catch (err) {
-      console.error("❌ Falló la carga protegida:", err.message);
-      setError(err.message);
-      
-      if (err.message.includes("Token") || err.message.includes("expirado") || err.message.includes("inválido")) {
-        localStorage.clear();
-        navigate('/');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+
+    const cargarProyectos = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/proyectos');
+        const data = response.data;
+
+        if (!isMounted) return;
+
+        if (Array.isArray(data)) {
+          setProyectos(data);
+        } else if (data && Array.isArray(data.data)) {
+          setProyectos(data.data);
+        } else if (data && Array.isArray(data.proyectos)) {
+          setProyectos(data.proyectos);
+        } else {
+          setProyectos([]);
+        }
+        setError('');
+
+      } catch (err) {
+        if (!isMounted) return;
+
+        const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
+        setError(mensaje || 'Error al conectar con el servidor.');
+
+        if (err.response?.status === 401 || err.response?.status === 403 || mensaje?.includes("Token")) {
+          localStorage.clear();
+          navigate('/');
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     cargarProyectos();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   const handleLogout = () => {
@@ -85,8 +78,7 @@ const Dashboard = () => {
             </h1>
             {usuario && (
               <p className="text-[#94A3B8] text-sm mt-1">
-                Bienvenido de vuelta, <span className="text-[#A855F7] font-bold">{usuario.nombre}</span> 
-                (Rol ID: <span className="text-[#22C55E] font-bold">{usuario.id_role || usuario.id_rol}</span>)
+                Bienvenido de vuelta, <span className="text-[#A855F7] font-bold">{usuario.nombre || usuario.correo}</span>
               </p>
             )}
           </div>
@@ -94,7 +86,7 @@ const Dashboard = () => {
           <div className="flex gap-3">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="text-xs bg-gradient-to-r from-[#A855F7] to-[#7C3AED] hover:from-[#9333EA] hover:to-[#6D28D9] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-lg hover:shadow-purple-500/20"
+              className="text-xs bg-gradient-to-r from-[#A855F7] to-[#7C3AED] hover:from-[#9333EA] hover:to-[#6D28D9] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-lg"
             >
               + Nueva Iniciativa
             </button>
@@ -115,29 +107,24 @@ const Dashboard = () => {
 
         {/* Renderizado de Proyectos */}
         {loading ? (
-          <p className="text-sm text-[#94A3B8] animate-pulse text-center mt-10">
-            Consultando iniciativas en el servidor Postgres...
-          </p>
+          <div className="flex flex-col items-center justify-center py-16">
+            <div className="w-8 h-8 border-4 border-[#A855F7] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p className="text-sm text-[#94A3B8] text-center">Cargando iniciativas...</p>
+          </div>
         ) : proyectos.length === 0 ? (
           <div className="text-center py-16 bg-[#13111C] border border-[#2D2845] rounded-xl">
             <p className="text-[#94A3B8] text-sm">No hay iniciativas registradas en el PMO actualmente.</p>
-            <p className="text-xs text-gray-500 mt-1">¡Presiona "+ Nueva Iniciativa" para crear una!</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {proyectos.map((proyecto) => (
               <div 
-                key={proyecto.id} 
-                onClick={() => navigate(`/proyectos/${proyecto.id}`)}
+                key={proyecto.id || proyecto.id_iniciativa} 
+                onClick={() => navigate(`/proyectos/${proyecto.id || proyecto.id_iniciativa}`)}
                 className="cursor-pointer relative bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg hover:border-[#A855F7]/80 hover:scale-[1.01] transition-all duration-300 overflow-hidden"
               >
-                {/* Etiqueta superior */}
-                <div className="absolute top-0 left-0 bg-[#A855F7]/10 text-[#A855F7] border-b border-r border-[#2D2845] text-[9px] uppercase font-bold tracking-widest px-3 py-1 rounded-br-lg">
-                  📋 Nueva Iniciativa
-                </div>
-
-                <div className="mt-4">
-                  <h3 className="text-lg font-bold text-white mb-2">{proyecto.nombre}</h3>
+                <div className="mt-2">
+                  <h3 className="text-lg font-bold text-white mb-2">{proyecto.nombre || proyecto.titulo}</h3>
                   <p className="text-xs text-[#94A3B8] line-clamp-3 mb-4">
                     {proyecto.descripcion || 'Sin descripción.'}
                   </p>
@@ -146,17 +133,13 @@ const Dashboard = () => {
                 <div className="flex justify-between items-center text-[10px] uppercase font-semibold tracking-wider pt-4 border-t border-[#2D2845]">
                   <span className="text-[#94A3B8]">Código: {proyecto.codigo || 'N/A'}</span>
                   
-                  {/* Badge dinámico según el estado */}
                   <span className={`px-2.5 py-0.5 rounded-full border ${
                     proyecto.estado === 'Aprobado' ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30' :
                     proyecto.estado === 'Evaluacion' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
                     proyecto.estado === 'Caso_de_Negocio' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
-                    proyecto.estado === 'Rechazado' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
                     'bg-gray-500/10 text-gray-400 border-gray-500/30'
                   }`}>
-                    {proyecto.estado === 'Caso_de_Negocio' ? 'Caso de Negocio' : 
-                    proyecto.estado === 'Evaluacion' ? 'En Evaluación' : 
-                    proyecto.estado || 'Idea'}
+                    {proyecto.estado || 'Idea'}
                   </span>
                 </div>
               </div>
@@ -166,7 +149,6 @@ const Dashboard = () => {
 
       </div>
 
-      {/* MODAL DEL FORMULARIO CONECTADO */}
       <NuevoProyecto
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}

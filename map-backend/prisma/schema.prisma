@@ -10,50 +10,45 @@ datasource db {
 model Usuario {
   id             Int                 @id @default(autoincrement())
   nombre         String              @db.VarChar(100)
-  correo         String              @unique @db.VarChar(100)
   contrasena     String              @db.VarChar(255)
-  id_rol         Int?
+  correo         String              @unique @db.VarChar(100)
   fecha_creacion DateTime?           @default(now()) @db.Timestamp(6)
+  id_rol         Int?
+  asignaciones   AsignacionRecurso[]
   logs_auditoria logs_auditoria[]
   roles          roles?              @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  asignaciones   AsignacionRecurso[]
 
   @@map("usuarios")
 }
 
 model Proyecto {
-  id                String              @id @default(uuid())
-  nombre            String
+  id                String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  codigo            String               @unique @db.VarChar(20)
+  nombre            String               @db.VarChar(150)
   descripcion       String?
-  estado            EstadoProyecto      @default(Caso_de_Negocio)
-  fecha_inicio      DateTime
-  fecha_fin         DateTime?
-  presupuesto       Decimal?            @db.Decimal(12, 2)
-  costo_real        Decimal?            @db.Decimal(12, 2)
-  porcentaje_avance Float?              @default(0)
-  departamento      String?
-  lider_proyecto    String?
-
-  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime?           @updatedAt @db.Timestamptz(6)
-
-  asignaciones      AsignacionRecurso[]
-  kpis              Kpi[]
+  estado            estado_proyecto_enum @default(Caso_de_Negocio)
+  departamento      String               @db.VarChar(100)
+  lider_proyecto    String               @db.VarChar(100)
+  presupuesto       Decimal              @default(0.00) @db.Decimal(12, 2)
+  costo_real        Decimal              @default(0.00) @db.Decimal(12, 2)
+  porcentaje_avance Int                  @default(0)
+  fecha_inicio      DateTime             @db.Date
+  fecha_fin         DateTime             @db.Date
+  creado_en         DateTime?            @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime?            @default(now()) @db.Timestamptz(6)
 
   @@map("proyectos")
 }
 
 model AsignacionRecurso {
   id                    Int       @id @default(autoincrement())
-  proyecto_id           String    // 👈 Tipo String para coincidir con Proyecto.id (uuid)
+  proyecto_id           String
   usuario_id            Int
   porcentaje_asignacion Int?      @default(100)
-  rol                   String?
   fecha_desde           DateTime? @db.Date
   fecha_hasta           DateTime? @db.Date
   created_at            DateTime? @default(now()) @db.Timestamptz(6)
-
-  proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  rol                   String?
   usuario               Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([proyecto_id], map: "idx_asignaciones_proyecto")
@@ -63,18 +58,16 @@ model AsignacionRecurso {
 
 model Kpi {
   id            Int                  @id @default(autoincrement())
-  proyecto_id   String               // 👈 Tipo String para coincidir con Proyecto.id (uuid)
+  proyecto_id   String
   nombre_kpi    String               @db.VarChar(100)
   descripcion   String?
   meta_valor    Decimal?             @db.Decimal(10, 2)
   valor_actual  Decimal?             @default(0.00) @db.Decimal(10, 2)
-  frecuencia    frecuencia_medicion? @default(Mensual)
   unidad_medida String?              @db.VarChar(20)
   created_at    DateTime?            @default(now()) @db.Timestamptz(6)
   updated_at    DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
-
+  frecuencia    frecuencia_medicion? @default(Mensual)
   historial     HistorialKpi[]
-  proyecto      Proyecto             @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([proyecto_id], map: "idx_kpis_proyecto")
   @@map("kpis")
@@ -94,7 +87,7 @@ model HistorialKpi {
 
 model logs_auditoria {
   id                Int       @id @default(autoincrement())
-  id_proyecto       String?   // 👈 Coincide con Proyecto.id
+  id_proyecto       String?
   id_usuario_accion Int?
   campo_modificado  String    @db.VarChar(100)
   valor_anterior    String?   @db.VarChar(255)
@@ -114,10 +107,10 @@ enum EstadoProyecto {
   Evaluacion
   Caso_de_Negocio
   Aprobado
+  Rechazado
   En_Ejecucion
   En_Pausa
   Completado
-  Rechazado
   Cancelado
 }
 
@@ -125,4 +118,13 @@ enum frecuencia_medicion {
   Semanal
   Mensual
   Trimestral
+}
+
+enum estado_proyecto_enum {
+  Caso_de_Negocio
+  Aprobado
+  En_Proceso
+  En_Pausa
+  Completado
+  Cancelado
 }

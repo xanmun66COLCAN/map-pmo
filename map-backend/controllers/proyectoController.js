@@ -1,12 +1,34 @@
 import { Request, Response } from 'express';
-import { PrismaClient, EstadoProyecto } from '@prisma/client';
+import { PrismaClient, estado_proyecto_enum } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// 🟢 GET: Obtener todos los proyectos
+export const getProyectos = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const proyectos = await prisma.proyecto.findMany({
+      orderBy: { fecha_creacion: 'desc' },
+    });
+
+    res.json({
+      success: true,
+      data: proyectos,
+    });
+  } catch (error: any) {
+    console.error("❌ Error al obtener proyectos:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al obtener la lista de proyectos.',
+      error: error.message,
+    });
+  }
+};
 
 // 🟢 POST: Registrar un nuevo proyecto
 export const crearProyecto = async (req: Request, res: Response): Promise<void> => {
   try {
     const {
+      codigo,
       nombre,
       descripcion,
       fecha_inicio,
@@ -17,24 +39,25 @@ export const crearProyecto = async (req: Request, res: Response): Promise<void> 
       estado,
     } = req.body;
 
-    // Validación de campos requeridos
-    if (!nombre || !fecha_inicio) {
+    if (!nombre || !codigo || !fecha_inicio || !fecha_fin || !departamento || !lider_proyecto) {
       res.status(400).json({
         success: false,
-        message: "Campos requeridos faltantes. El 'nombre' y la 'fecha_inicio' son obligatorios.",
+        message: "Campos requeridos faltantes. 'codigo', 'nombre', 'fecha_inicio', 'fecha_fin', 'departamento' y 'lider_proyecto' son obligatorios.",
       });
       return;
     }
 
-    // Operación de inserción con Prisma
     const nuevoProyecto = await prisma.proyecto.create({
       data: {
+        codigo,
         nombre,
-        descripcion,
+        descripcion: descripcion || null,
+        departamento,
+        lider_proyecto,
         fecha_inicio: new Date(fecha_inicio),
-        fecha_fin: fecha_fin ? new Date(fecha_fin) : null,
+        fecha_fin: new Date(fecha_fin),
         presupuesto: presupuesto ? parseFloat(presupuesto) : 0.00,
-        estado: (estado as EstadoProyecto) || EstadoProyecto.Caso_de_Negocio,
+        estado: (estado as estado_proyecto_enum) || estado_proyecto_enum.Caso_de_Negocio,
       },
     });
 
@@ -59,25 +82,7 @@ export const getProyectoById = async (req: Request, res: Response): Promise<void
     const { id } = req.params;
 
     const proyecto = await prisma.proyecto.findUnique({
-      where: { id: Number(id) }, // Convertimos a Number si el schema usa Int autoincrementable
-      include: {
-        kpis: {
-          include: {
-            historial: true,
-          },
-        },
-        asignaciones: {
-          include: {
-            usuario: {
-              select: {
-                id: true,
-                nombre: true,
-                correo: true,
-              },
-            },
-          },
-        },
-      },
+      where: { id },
     });
 
     if (!proyecto) {
@@ -97,6 +102,56 @@ export const getProyectoById = async (req: Request, res: Response): Promise<void
     res.status(500).json({
       success: false,
       message: 'Error interno del servidor al consultar la iniciativa.',
+      error: error.message,
+    });
+  }
+};
+
+// ✏️ PUT / PATCH: Actualizar datos de un proyecto
+export const actualizarProyecto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const {
+      nombre,
+      descripcion,
+      fecha_inicio,
+      fecha_fin,
+      presupuesto,
+      costo_real,
+      porcentaje_avance,
+      departamento,
+      lider_proyecto,
+      estado,
+    } = req.body;
+
+    const dataAActualizar: any = {};
+
+    if (nombre !== undefined) dataAActualizar.nombre = nombre;
+    if (descripcion !== undefined) dataAActualizar.descripcion = descripcion;
+    if (departamento !== undefined) dataAActualizar.departamento = departamento;
+    if (lider_proyecto !== undefined) dataAActualizar.lider_proyecto = lider_proyecto;
+    if (fecha_inicio) dataAActualizar.fecha_inicio = new Date(fecha_inicio);
+    if (fecha_fin) dataAActualizar.fecha_fin = new Date(fecha_fin);
+    if (presupuesto !== undefined) dataAActualizar.presupuesto = parseFloat(presupuesto);
+    if (costo_real !== undefined) dataAActualizar.costo_real = parseFloat(costo_real);
+    if (porcentaje_avance !== undefined) dataAActualizar.porcentaje_avance = parseFloat(porcentaje_avance);
+    if (estado) dataAActualizar.estado = estado as estado_proyecto_enum;
+
+    const proyectoActualizado = await prisma.proyecto.update({
+      where: { id },
+      data: dataAActualizar,
+    });
+
+    res.json({
+      success: true,
+      mensaje: "Proyecto actualizado exitosamente.",
+      data: proyectoActualizado,
+    });
+  } catch (error: any) {
+    console.error("❌ Error al actualizar el proyecto:", error);
+    res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor al actualizar el proyecto.',
       error: error.message,
     });
   }
