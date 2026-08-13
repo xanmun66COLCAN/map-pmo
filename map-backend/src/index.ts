@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import proyectoRoutes from './routes/proyecto.routes';
+import dashboardRoutes from './routes/dashboardRoutes';
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -31,3 +32,5 @@ app.get('/', (req: Request, res: Response) => {
 app.listen(PORT, () => {
   console.log(`📡 Servidor corriendo en: http://localhost:${PORT}`);
 });
+
+app.use('/api/dashboard', dashboardRoutes);
