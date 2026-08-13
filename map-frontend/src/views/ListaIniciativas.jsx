@@ -45,7 +45,6 @@ export default function ListaIniciativas() {
     }
   };
 
-  // Filtrado según el usuario actual y el estado seleccionado
   const iniciativasVisibles = iniciativas.filter((item) => {
     if (!tieneRol(['ADMINISTRADOR', 'LIDER_PMO']) && item.solicitante_id !== user?.id) {
       return false;
@@ -60,7 +59,43 @@ export default function ListaIniciativas() {
     return true;
   });
 
-  // Cálculo de KPIs dinámicos
+  // Función para exportar a CSV
+  const exportarAExcelCSV = () => {
+    if (iniciativasFiltradas.length === 0) {
+      alert('No hay iniciativas para exportar con los filtros actuales.');
+      return;
+    }
+
+    const encabeza = ['Código', 'Nombre / Proyecto', 'Solicitante', 'Área', 'Estado', 'Presupuesto Estimado', 'Prioridad'];
+    
+    const filas = iniciativasFiltradas.map((item) => [
+      `"${item.codigo || `INIC-${item.id}`}"`,
+      `"${(item.nombre || item.titulo || '').replace(/"/g, '""')}"`,
+      `"${(item.solicitante?.nombre || item.nombre_solicitante || 'N/A').replace(/"/g, '""')}"`,
+      `"${(item.area || 'General').replace(/"/g, '""')}"`,
+      `"${item.estado || 'EVALUACION'}"`,
+      `"${item.presupuesto_estimado || 0}"`,
+      `"${item.prioridad || 'MEDIA'}"`
+    ]);
+
+    const contenidoCSV = [
+      encabeza.join(','),
+      ...filas.map((f) => f.join(','))
+    ].join('\n');
+
+    // Blob con UTF-8 BOM para soporte correcto de caracteres especiales en Excel
+    const blob = new Blob(['\uFEFF' + contenidoCSV], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    
+    const fecha = new Date().toISOString().split('T')[0];
+    link.href = url;
+    link.setAttribute('download', `iniciativas_MAP_${fecha}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const kpis = {
     total: iniciativasVisibles.length,
     evaluacion: iniciativasVisibles.filter((i) => i.estado === 'EVALUACION' || i.estado === 'EN_EVALUACION').length,
@@ -84,7 +119,6 @@ export default function ListaIniciativas() {
 
   return (
     <div className="p-6 bg-[#0B0A0F] min-h-screen text-white">
-      
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
@@ -104,6 +138,15 @@ export default function ListaIniciativas() {
             className="px-4 py-2 bg-[#A855F7] hover:bg-[#9333EA] text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-[#A855F7]/20"
           >
             <span>+</span> Nueva Iniciativa
+          </button>
+
+          {/* Botón Exportar CSV */}
+          <button
+            onClick={exportarAExcelCSV}
+            className="px-3 py-2 bg-[#13111C] border border-[#2D2845] hover:border-[#22C55E] text-[#94A3B8] hover:text-[#22C55E] text-sm rounded-lg transition-all flex items-center gap-2"
+            title="Exportar iniciativas visibles a CSV/Excel"
+          >
+            📥 Exportar
           </button>
 
           <select
@@ -128,56 +171,41 @@ export default function ListaIniciativas() {
         </div>
       </div>
 
-      {/* Tarjetas de Métricas / KPIs */}
+      {/* Tarjetas KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        
-        {/* Card Total */}
         <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">Total Iniciativas</span>
             <span className="text-2xl font-extrabold text-white mt-1 block">{kpis.total}</span>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-[#A855F7]/10 border border-[#A855F7]/30 flex items-center justify-center text-[#A855F7] text-lg">
-            📂
-          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#A855F7]/10 border border-[#A855F7]/30 flex items-center justify-center text-[#A855F7] text-lg">📂</div>
         </div>
 
-        {/* Card En Evaluación */}
         <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">En Evaluación</span>
             <span className="text-2xl font-extrabold text-[#3B82F6] mt-1 block">{kpis.evaluacion}</span>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-[#3B82F6]/10 border border-[#3B82F6]/30 flex items-center justify-center text-[#3B82F6] text-lg">
-            ⏳
-          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#3B82F6]/10 border border-[#3B82F6]/30 flex items-center justify-center text-[#3B82F6] text-lg">⏳</div>
         </div>
 
-        {/* Card Aprobadas */}
         <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">Aprobadas</span>
             <span className="text-2xl font-extrabold text-[#22C55E] mt-1 block">{kpis.aprobadas}</span>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 flex items-center justify-center text-[#22C55E] text-lg">
-            ✅
-          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 flex items-center justify-center text-[#22C55E] text-lg">✅</div>
         </div>
 
-        {/* Card Rechazadas */}
         <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">Rechazadas</span>
             <span className="text-2xl font-extrabold text-[#EF4444] mt-1 block">{kpis.rechazadas}</span>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] text-lg">
-            🚫
-          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] text-lg">🚫</div>
         </div>
-
       </div>
 
-      {/* Alerta de Error */}
       {error && (
         <div className="mb-6 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#F87171] rounded-lg text-sm flex items-center justify-between">
           <span>⚠️ {error}</span>
@@ -185,7 +213,6 @@ export default function ListaIniciativas() {
         </div>
       )}
 
-      {/* Tabla de Iniciativas */}
       {loading ? (
         <div className="flex justify-center items-center py-20 text-[#94A3B8]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A855F7] mr-3"></div>
@@ -266,7 +293,6 @@ export default function ListaIniciativas() {
         </div>
       )}
 
-      {/* Modales */}
       <ModalCrearIniciativa
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
