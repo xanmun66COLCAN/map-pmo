@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Instancia centralizada apuntando al backend Express
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   timeout: 8000,
   headers: {
     'Content-Type': 'application/json',
@@ -34,20 +34,22 @@ api.interceptors.response.use(
       console.error('⏱️ Tiempo de espera agotado: El backend no respondió a tiempo.');
     }
 
-    // Si el servidor devuelve 401 o 403
+    // Si el servidor devuelve 401 o 403 (No autorizado / Prohibido)
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       console.warn('🔒 Sesión inválida o expirada. Limpiando tokens de autenticación...');
 
-      // 1. Limpieza dirigida de claves de sesión (evita borrado masivo no deseado)
+      // Limpieza de las llaves estandarizadas de sesión
       localStorage.removeItem('token');
       localStorage.removeItem('authToken');
+      localStorage.removeItem('usuario');
       localStorage.removeItem('user');
+      localStorage.removeItem('user_role');
 
-      // 2. Ruta destino de login (ajusta '/login' o '/' según la ruta real de tu vista de acceso)
-      const LOGIN_ROUTE = '/login'; 
+      // Ruta destino de login (ajusta a '/login' si no es la raíz)
+      const LOGIN_ROUTE = '/'; 
 
-      // 3. Redirección condicional para prevenir bucle infinito
-      if (window.location.pathname !== LOGIN_ROUTE && window.location.pathname !== '/') {
+      // Redirección condicional para prevenir bucle infinito
+      if (window.location.pathname !== LOGIN_ROUTE) {
         window.location.href = LOGIN_ROUTE;
       }
     }
