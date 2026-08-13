@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosInstance';
+import ModalCrearIniciativa from '../components/ModalCrearIniciativa';
 
 export default function ListaIniciativas() {
   const { user, tieneRol } = useAuth();
@@ -8,6 +9,8 @@ export default function ListaIniciativas() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [procesandoId, setProcesandoId] = useState(null);
 
   useEffect(() => {
     cargarIniciativas();
@@ -17,7 +20,6 @@ export default function ListaIniciativas() {
     try {
       setLoading(true);
       setError('');
-      // Axios enviará automáticamente el token JWT en las cabeceras
       const response = await api.get('/proyectos');
       setIniciativas(response.data);
     } catch (err) {
@@ -28,9 +30,20 @@ export default function ListaIniciativas() {
     }
   };
 
-  // Filtrado según selección y según el rol del usuario
+  const cambiarEstadoIniciativa = async (id, nuevoEstado) => {
+    try {
+      setProcesandoId(id);
+      await api.patch(`/proyectos/${id}`, { estado: nuevoEstado });
+      await cargarIniciativas();
+    } catch (err) {
+      console.error(`Error al cambiar estado a ${nuevoEstado}:`, err);
+      alert(err.response?.data?.mensaje || 'No se pudo actualizar el estado de la iniciativa.');
+    } finally {
+      setProcesandoId(null);
+    }
+  };
+
   const iniciativasFiltradas = iniciativas.filter((item) => {
-    // Si el usuario es SOLICITANTE, solo ve sus propias iniciativas (si el backend no las filtró previamente)
     if (!tieneRol(['ADMINISTRADOR', 'LIDER_PMO']) && item.solicitante_id !== user?.id) {
       return false;
     }
@@ -58,7 +71,6 @@ export default function ListaIniciativas() {
 
   return (
     <div className="p-6 bg-[#0B0A0F] min-h-screen text-white">
-      
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
@@ -73,6 +85,14 @@ export default function ListaIniciativas() {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Botón Abrir Modal Nueva Iniciativa */}
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-[#A855F7] hover:bg-[#9333EA] text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+          >
+            <span>+</span> Nueva Iniciativa
+          </button>
+
           {/* Filtro por estado */}
           <select
             value={filtroEstado}
@@ -86,7 +106,7 @@ export default function ListaIniciativas() {
             <option value="RECHAZADO">Rechazado</option>
           </select>
 
-          {/* Botón de recarga manual */}
+          {/* Botón recargar */}
           <button
             onClick={cargarIniciativas}
             className="p-2 bg-[#13111C] border border-[#2D2845] rounded-lg hover:border-[#A855F7] transition-all text-[#94A3B8] hover:text-white"
@@ -151,14 +171,16 @@ export default function ListaIniciativas() {
                       {tieneRol(['ADMINISTRADOR', 'LIDER_PMO']) && (
                         <td className="py-4 px-6 text-right space-x-2">
                           <button
-                            onClick={() => console.log('Aprobar', item.id)}
-                            className="px-3 py-1 bg-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E] hover:text-white rounded text-xs transition-colors"
+                            disabled={procesandoId === item.id}
+                            onClick={() => cambiarEstadoIniciativa(item.id, 'APROBADO')}
+                            className="px-3 py-1 bg-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E] hover:text-white rounded text-xs transition-colors disabled:opacity-50"
                           >
                             Aprobar
                           </button>
                           <button
-                            onClick={() => console.log('Rechazar', item.id)}
-                            className="px-3 py-1 bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444] hover:text-white rounded text-xs transition-colors"
+                            disabled={procesandoId === item.id}
+                            onClick={() => cambiarEstadoIniciativa(item.id, 'RECHAZADO')}
+                            className="px-3 py-1 bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444] hover:text-white rounded text-xs transition-colors disabled:opacity-50"
                           >
                             Rechazar
                           </button>
@@ -181,6 +203,13 @@ export default function ListaIniciativas() {
           </div>
         </div>
       )}
+
+      {/* Renderizado del Modal de Creación */}
+      <ModalCrearIniciativa
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={cargarIniciativas}
+      />
     </div>
   );
 }
