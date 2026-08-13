@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosInstance';
 import ModalCrearIniciativa from '../components/ModalCrearIniciativa';
+import ModalDetalleIniciativa from '../components/ModalDetalleIniciativa';
 
 export default function ListaIniciativas() {
   const { user, tieneRol } = useAuth();
@@ -10,6 +11,7 @@ export default function ListaIniciativas() {
   const [error, setError] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [iniciativaSeleccionada, setIniciativaSeleccionada] = useState(null);
   const [procesandoId, setProcesandoId] = useState(null);
 
   useEffect(() => {
@@ -85,7 +87,6 @@ export default function ListaIniciativas() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Botón Abrir Modal Nueva Iniciativa */}
           <button
             onClick={() => setIsModalOpen(true)}
             className="px-4 py-2 bg-[#A855F7] hover:bg-[#9333EA] text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
@@ -93,7 +94,6 @@ export default function ListaIniciativas() {
             <span>+</span> Nueva Iniciativa
           </button>
 
-          {/* Filtro por estado */}
           <select
             value={filtroEstado}
             onChange={(e) => setFiltroEstado(e.target.value)}
@@ -106,7 +106,6 @@ export default function ListaIniciativas() {
             <option value="RECHAZADO">Rechazado</option>
           </select>
 
-          {/* Botón recargar */}
           <button
             onClick={cargarIniciativas}
             className="p-2 bg-[#13111C] border border-[#2D2845] rounded-lg hover:border-[#A855F7] transition-all text-[#94A3B8] hover:text-white"
@@ -117,7 +116,6 @@ export default function ListaIniciativas() {
         </div>
       </div>
 
-      {/* Alerta de Error */}
       {error && (
         <div className="mb-6 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#F87171] rounded-lg text-sm flex items-center justify-between">
           <span>⚠️ {error}</span>
@@ -125,14 +123,12 @@ export default function ListaIniciativas() {
         </div>
       )}
 
-      {/* Indicador de Carga */}
       {loading ? (
         <div className="flex justify-center items-center py-20 text-[#94A3B8]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A855F7] mr-3"></div>
           Obteniendo iniciativas de MAP...
         </div>
       ) : (
-        /* Tabla de Proyectos / Iniciativas */
         <div className="bg-[#13111C] border border-[#2D2845] rounded-xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm text-[#94A3B8]">
@@ -150,7 +146,11 @@ export default function ListaIniciativas() {
               <tbody className="divide-y divide-[#2D2845]">
                 {iniciativasFiltradas.length > 0 ? (
                   iniciativasFiltradas.map((item) => (
-                    <tr key={item.id} className="hover:bg-[#1A1726]/50 transition-colors">
+                    <tr
+                      key={item.id}
+                      onClick={() => setIniciativaSeleccionada(item)}
+                      className="hover:bg-[#1A1726]/50 transition-colors cursor-pointer"
+                    >
                       <td className="py-4 px-6 font-medium text-white">
                         <div className="font-semibold text-white">{item.nombre || item.titulo}</div>
                         <div className="text-xs text-[#64748B]">{item.codigo || `INIC-${item.id}`}</div>
@@ -167,9 +167,8 @@ export default function ListaIniciativas() {
                         </span>
                       </td>
 
-                      {/* Acciones para Administración y Líderes PMO */}
                       {tieneRol(['ADMINISTRADOR', 'LIDER_PMO']) && (
-                        <td className="py-4 px-6 text-right space-x-2">
+                        <td className="py-4 px-6 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
                           <button
                             disabled={procesandoId === item.id}
                             onClick={() => cambiarEstadoIniciativa(item.id, 'APROBADO')}
@@ -204,11 +203,20 @@ export default function ListaIniciativas() {
         </div>
       )}
 
-      {/* Renderizado del Modal de Creación */}
+      {/* Modal de Creación */}
       <ModalCrearIniciativa
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={cargarIniciativas}
+      />
+
+      {/* Modal de Detalle */}
+      <ModalDetalleIniciativa
+        iniciativa={iniciativaSeleccionada}
+        onClose={() => setIniciativaSeleccionada(null)}
+        onAprobar={(id) => cambiarEstadoIniciativa(id, 'APROBADO')}
+        onRechazar={(id) => cambiarEstadoIniciativa(id, 'RECHAZADO')}
+        esAdminOLider={tieneRol(['ADMINISTRADOR', 'LIDER_PMO'])}
       />
     </div>
   );
