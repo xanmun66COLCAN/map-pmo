@@ -45,17 +45,28 @@ export default function ListaIniciativas() {
     }
   };
 
-  const iniciativasFiltradas = iniciativas.filter((item) => {
+  // Filtrado según el usuario actual y el estado seleccionado
+  const iniciativasVisibles = iniciativas.filter((item) => {
     if (!tieneRol(['ADMINISTRADOR', 'LIDER_PMO']) && item.solicitante_id !== user?.id) {
       return false;
     }
+    return true;
+  });
 
+  const iniciativasFiltradas = iniciativasVisibles.filter((item) => {
     if (filtroEstado !== 'TODOS' && item.estado !== filtroEstado) {
       return false;
     }
-
     return true;
   });
+
+  // Cálculo de KPIs dinámicos
+  const kpis = {
+    total: iniciativasVisibles.length,
+    evaluacion: iniciativasVisibles.filter((i) => i.estado === 'EVALUACION' || i.estado === 'EN_EVALUACION').length,
+    aprobadas: iniciativasVisibles.filter((i) => i.estado === 'APROBADO').length,
+    rechazadas: iniciativasVisibles.filter((i) => i.estado === 'RECHAZADO').length,
+  };
 
   const getBadgeColor = (estado) => {
     switch (estado) {
@@ -73,6 +84,7 @@ export default function ListaIniciativas() {
 
   return (
     <div className="p-6 bg-[#0B0A0F] min-h-screen text-white">
+      
       {/* Encabezado */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
         <div>
@@ -89,7 +101,7 @@ export default function ListaIniciativas() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-[#A855F7] hover:bg-[#9333EA] text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+            className="px-4 py-2 bg-[#A855F7] hover:bg-[#9333EA] text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-[#A855F7]/20"
           >
             <span>+</span> Nueva Iniciativa
           </button>
@@ -116,6 +128,56 @@ export default function ListaIniciativas() {
         </div>
       </div>
 
+      {/* Tarjetas de Métricas / KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        
+        {/* Card Total */}
+        <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">Total Iniciativas</span>
+            <span className="text-2xl font-extrabold text-white mt-1 block">{kpis.total}</span>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#A855F7]/10 border border-[#A855F7]/30 flex items-center justify-center text-[#A855F7] text-lg">
+            📂
+          </div>
+        </div>
+
+        {/* Card En Evaluación */}
+        <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">En Evaluación</span>
+            <span className="text-2xl font-extrabold text-[#3B82F6] mt-1 block">{kpis.evaluacion}</span>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#3B82F6]/10 border border-[#3B82F6]/30 flex items-center justify-center text-[#3B82F6] text-lg">
+            ⏳
+          </div>
+        </div>
+
+        {/* Card Aprobadas */}
+        <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">Aprobadas</span>
+            <span className="text-2xl font-extrabold text-[#22C55E] mt-1 block">{kpis.aprobadas}</span>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#22C55E]/10 border border-[#22C55E]/30 flex items-center justify-center text-[#22C55E] text-lg">
+            ✅
+          </div>
+        </div>
+
+        {/* Card Rechazadas */}
+        <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg flex items-center justify-between">
+          <div>
+            <span className="text-xs font-medium text-[#94A3B8] uppercase tracking-wider block">Rechazadas</span>
+            <span className="text-2xl font-extrabold text-[#EF4444] mt-1 block">{kpis.rechazadas}</span>
+          </div>
+          <div className="w-10 h-10 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/30 flex items-center justify-center text-[#EF4444] text-lg">
+            🚫
+          </div>
+        </div>
+
+      </div>
+
+      {/* Alerta de Error */}
       {error && (
         <div className="mb-6 p-4 bg-[#EF4444]/10 border border-[#EF4444]/30 text-[#F87171] rounded-lg text-sm flex items-center justify-between">
           <span>⚠️ {error}</span>
@@ -123,6 +185,7 @@ export default function ListaIniciativas() {
         </div>
       )}
 
+      {/* Tabla de Iniciativas */}
       {loading ? (
         <div className="flex justify-center items-center py-20 text-[#94A3B8]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#A855F7] mr-3"></div>
@@ -203,14 +266,13 @@ export default function ListaIniciativas() {
         </div>
       )}
 
-      {/* Modal de Creación */}
+      {/* Modales */}
       <ModalCrearIniciativa
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSuccess={cargarIniciativas}
       />
 
-      {/* Modal de Detalle */}
       <ModalDetalleIniciativa
         iniciativa={iniciativaSeleccionada}
         onClose={() => setIniciativaSeleccionada(null)}
