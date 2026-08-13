@@ -1,19 +1,27 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import pool from '../db'; // Asegúrate de que apunte a tu pool de Postgres
+import pool from '../db';
+
+// Diccionario para convertir el número a string
+const MAPA_ROLES: Record<number, string> = {
+  1: 'ADMINISTRADOR',
+  2: 'LIDER_PMO',
+  3: 'SOLICITANTE',
+  4: 'REVISOR'
+};
 
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
     const { correo, contrasena } = req.body;
 
-    // 1. Validar que vengan los datos
+    // 1. Validar datos
     if (!correo || !contrasena) {
       res.status(400).json({ message: 'Correo y contraseña son requeridos' });
       return;
     }
 
-    // 2. Buscar al usuario en la base de datos
+    // 2. Buscar usuario simple (sin join)
     const query = 'SELECT * FROM usuarios WHERE LOWER(correo) = LOWER($1)';
     const result = await pool.query(query, [correo]);
 
@@ -24,7 +32,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     const usuario = result.rows[0];
 
-    // 3. Verificar contraseña usando Bcrypt real
+    // 3. Verificar contraseña
     const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
 
     if (!contrasenaValida) {
@@ -32,26 +40,31 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    // 4. Generar el Token JWT usando la clave secreta del .env
+    // 4. Mapear el id_rol a su nombre en texto
+    const rolNombre = MAPA_ROLES[usuario.id_rol] || 'SOLICITANTE';
+
+    // 5. Generar Token JWT
     const secretKey = process.env.JWT_SECRET || 'clave_secreta_por_defecto';
     const token = jwt.sign(
       { 
         id_usuario: usuario.id, 
         correo: usuario.correo, 
-        id_rol: usuario.id_rol 
+        rol: rolNombre 
       },
       secretKey,
       { expiresIn: '8h' }
     );
 
-    // 5. Clonar el usuario para eliminar la contraseña de forma segura sin mutar directamente el row original de forma estricta
-    const { contrasena: _, ...usuarioSinContrasena } = usuario;
-
-    // 6. Responder al frontend con el éxito total y el TOKEN
+    // 6. Respuesta limpia al frontend
     res.status(200).json({
       message: '¡Inicio de sesión exitoso!',
       token,
-      usuario: usuarioSinContrasena
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        correo: usuario.correo,
+        rol: rolNombre
+      }
     });
 
   } catch (error: any) {

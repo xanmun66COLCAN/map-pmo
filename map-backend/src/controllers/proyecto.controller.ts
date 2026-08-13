@@ -49,7 +49,15 @@ export const getProyectosDashboard = async (_req: Request, res: Response) => {
           variacionPresupuestaria: totalPresupuesto - totalCostoReal,
         },
         distribucionPorEstado: estadoConteo,
-        proyectosRecientes: ultimosProyectos,
+        proyectosRecientes: ultimosProyectos.map((p) => ({
+          ...p,
+          solicitante: {
+            id: (p as any).id_usuario || null,
+            nombre: p.lider_proyecto || 'Sin Asignar',
+            correo: '',
+            departamento: p.departamento || 'General',
+          },
+        })),
       },
     });
   } catch (error: any) {
@@ -63,7 +71,27 @@ export const getProyectos = async (_req: Request, res: Response) => {
     const proyectos = await prisma.proyecto.findMany({
       orderBy: { fecha_inicio: 'desc' },
     });
-    res.status(200).json({ success: true, total: proyectos.length, data: proyectos });
+
+    // Formateamos la respuesta para entregar la estructura de solicitante
+    const proyectosFormateados = proyectos.map((p: any) => ({
+      id: p.id,
+      codigo: p.codigo,
+      nombre: p.nombre,
+      descripcion: p.descripcion,
+      estado: p.estado,
+      presupuesto: p.presupuesto,
+      porcentaje_avance: p.porcentaje_avance,
+      fecha_inicio: p.fecha_inicio,
+      fecha_fin: p.fecha_fin,
+      solicitante: {
+        id: p.id_usuario || null,
+        nombre: p.lider_proyecto || 'Sin Asignar',
+        correo: '',
+        departamento: p.departamento || 'General',
+      },
+    }));
+
+    res.status(200).json({ success: true, total: proyectosFormateados.length, data: proyectosFormateados });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Error al obtener proyectos.', error: error.message });
   }
@@ -73,12 +101,26 @@ export const getProyectos = async (_req: Request, res: Response) => {
 export const getProyectoById = async (req: AuthRequest, res: Response) => {
   const id = String(req.params.id);
   try {
-    const proyecto = await prisma.proyecto.findUnique({ where: { id } });
+    const proyecto: any = await prisma.proyecto.findUnique({
+      where: { id },
+    });
+
     if (!proyecto) {
       res.status(404).json({ success: false, message: 'Proyecto no encontrado' });
       return;
     }
-    res.status(200).json({ success: true, data: proyecto });
+
+    const proyectoFormateado = {
+      ...proyecto,
+      solicitante: {
+        id: proyecto.id_usuario || null,
+        nombre: proyecto.lider_proyecto || 'Sin Asignar',
+        correo: '',
+        departamento: proyecto.departamento || 'General',
+      },
+    };
+
+    res.status(200).json({ success: true, data: proyectoFormateado });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
