@@ -33,6 +33,10 @@ const Dashboard = () => {
   // Criterio de ordenamiento para tarjetas
   const [criterioOrden, setCriterioOrden] = useState('fecha_desc');
 
+  // Filtros de búsqueda y estado
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
+
   const navigate = useNavigate();
 
   const usuarioString = localStorage.getItem('usuario');
@@ -122,6 +126,18 @@ const Dashboard = () => {
       }
     });
   };
+
+  // Filtrado de proyectos en base a búsqueda y estado
+  const proyectosFiltrados = proyectos.filter((proyecto) => {
+    const cumpleBusqueda = 
+      (proyecto.nombre && proyecto.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (proyecto.codigo && proyecto.codigo.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (proyecto.descripcion && proyecto.descripcion.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const cumpleEstado = filtroEstado === 'TODOS' || proyecto.estado === filtroEstado;
+
+    return cumpleBusqueda && cumpleEstado;
+  });
 
   return (
     <div className="min-h-screen bg-[#0B0A0F] text-white p-6 flex flex-col items-center">
@@ -289,23 +305,47 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* Tarjetas + Control de ordenamiento + Enlace "Ver iniciativas en estudio →" */}
+            {/* SECCIÓN DE FILTROS Y TARJETAS */}
             <div className="border-t border-[#2D2845] pt-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <h2 className="text-xl font-bold text-white">
-                  📋 Iniciativas Recientes
-                </h2>
+              
+              {/* Barra de Filtros interactiva */}
+              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-[#13111C] border border-[#2D2845] p-4 rounded-xl">
+                
+                {/* Input de Búsqueda */}
+                <div className="w-full md:w-1/2">
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre, código o descripción..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full bg-[#0B0A0F] border border-[#2D2845] rounded-lg px-4 py-2 text-sm text-white placeholder-[#64748B] focus:outline-none focus:border-[#A855F7] transition-all"
+                  />
+                </div>
 
-                <div className="flex flex-wrap items-center gap-3">
+                {/* Selectores de Estado y Ordenamiento */}
+                <div className="w-full md:w-1/2 flex flex-wrap items-center justify-end gap-3">
                   <div className="flex items-center gap-2">
-                    <label htmlFor="ordenar-dash" className="text-xs text-[#94A3B8]">
-                      Ordenar:
-                    </label>
+                    <span className="text-xs text-[#94A3B8] font-semibold whitespace-nowrap">Estado:</span>
+                    <select
+                      value={filtroEstado}
+                      onChange={(e) => setFiltroEstado(e.target.value)}
+                      className="bg-[#0B0A0F] border border-[#2D2845] rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-[#A855F7] transition-all"
+                    >
+                      <option value="TODOS">Todos los estados</option>
+                      <option value="Caso_de_Negocio">Caso de Negocio</option>
+                      <option value="Aprobado">Aprobado</option>
+                      <option value="En_Proceso">En Proceso</option>
+                      <option value="Completado">Completado</option>
+                      <option value="En_Pausa">En Pausa</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
                     <select
                       id="ordenar-dash"
                       value={criterioOrden}
                       onChange={(e) => setCriterioOrden(e.target.value)}
-                      className="bg-[#13111C] border border-[#2D2845] text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A855F7]"
+                      className="bg-[#0B0A0F] border border-[#2D2845] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#A855F7]"
                     >
                       <option value="fecha_desc">📅 Más recientes</option>
                       <option value="fecha_asc">📅 Más antiguas</option>
@@ -315,23 +355,34 @@ const Dashboard = () => {
                       <option value="presupuesto_asc">💰 Menor Presupuesto</option>
                     </select>
                   </div>
-
-                  <Link
-                    to="/iniciativas?filtro=en_estudio"
-                    className="text-xs text-[#A855F7] hover:text-[#9333EA] font-semibold transition-colors flex items-center gap-1"
-                  >
-                    Ver iniciativas en estudio →
-                  </Link>
                 </div>
+
+              </div>
+
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">
+                  📋 Iniciativas Recientes <span className="text-xs text-[#A855F7] font-normal">({proyectosFiltrados.length} encontradas)</span>
+                </h2>
+
+                <Link
+                  to="/iniciativas?filtro=en_estudio"
+                  className="text-xs text-[#A855F7] hover:text-[#9333EA] font-semibold transition-colors flex items-center gap-1"
+                >
+                  Ver portafolio completo →
+                </Link>
               </div>
 
               {proyectos.length === 0 ? (
                 <div className="text-center py-16 bg-[#13111C] border border-[#2D2845] rounded-xl">
                   <p className="text-[#94A3B8] text-sm">No hay iniciativas registradas en el PMO actualmente.</p>
                 </div>
+              ) : proyectosFiltrados.length === 0 ? (
+                <div className="text-center py-12 bg-[#13111C] border border-[#2D2845] rounded-xl">
+                  <p className="text-[#94A3B8] text-sm">No se encontraron iniciativas con los filtros seleccionados.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {ordenarProyectos(proyectos).slice(0, 4).map((proyecto) => (
+                  {ordenarProyectos(proyectosFiltrados).map((proyecto) => (
                     <div 
                       key={proyecto.id || proyecto.id_iniciativa} 
                       onClick={() => navigate(`/proyectos/${proyecto.id || proyecto.id_iniciativa}`)}
@@ -351,7 +402,7 @@ const Dashboard = () => {
                           proyecto.estado === 'Aprobado' || proyecto.estado === 'Completado' ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30' :
                           proyecto.estado === 'Evaluacion' || proyecto.estado === 'En_Proceso' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
                           proyecto.estado === 'Caso_de_Negocio' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                          'bg-gray-500/10 text-gray-400 border-gray-500/30'
+                          'bg-gray-500/10 target:bg-gray-400 border-gray-500/30 text-gray-400'
                         }`}>
                           {proyecto.estado || 'Idea'}
                         </span>

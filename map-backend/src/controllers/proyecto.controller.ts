@@ -8,7 +8,7 @@ export interface AuthRequest extends Request {
 const prisma = new PrismaClient();
 
 // GET: Dashboard
-export const getProyectosDashboard = async (_req: Request, res: Response) => {
+export const getProyectosDashboard = async (_req: Request, res: Response): Promise<void> => {
   try {
     const [totalProyectos, proyectosPorEstado, agregadoPresupuesto, ultimosProyectos] = await Promise.all([
       prisma.proyecto.count(),
@@ -66,13 +66,12 @@ export const getProyectosDashboard = async (_req: Request, res: Response) => {
 };
 
 // GET ALL
-export const getProyectos = async (_req: Request, res: Response) => {
+export const getProyectos = async (_req: Request, res: Response): Promise<void> => {
   try {
     const proyectos = await prisma.proyecto.findMany({
       orderBy: { fecha_inicio: 'desc' },
     });
 
-    // Formateamos la respuesta para entregar la estructura de solicitante
     const proyectosFormateados = proyectos.map((p: any) => ({
       id: p.id,
       codigo: p.codigo,
@@ -98,7 +97,7 @@ export const getProyectos = async (_req: Request, res: Response) => {
 };
 
 // GET BY ID
-export const getProyectoById = async (req: AuthRequest, res: Response) => {
+export const getProyectoById = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   try {
     const proyecto: any = await prisma.proyecto.findUnique({
@@ -127,7 +126,7 @@ export const getProyectoById = async (req: AuthRequest, res: Response) => {
 };
 
 // CREATE
-export const crearProyecto = async (req: AuthRequest, res: Response) => {
+export const crearProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { codigo, nombre, descripcion, fecha_inicio, fecha_fin, presupuesto, departamento, lider_proyecto, estado } = req.body;
 
@@ -143,7 +142,7 @@ export const crearProyecto = async (req: AuthRequest, res: Response) => {
         descripcion: descripcion || '',
         fecha_inicio: fecha_inicio ? new Date(fecha_inicio) : new Date(),
         ...(fecha_fin && { fecha_fin: new Date(fecha_fin) }),
-        presupuesto: presupuesto ? Number(presupuesto) : 0,
+        presupuesto: presupuesto !== undefined ? Number(presupuesto) : 0,
         departamento: departamento || '',
         lider_proyecto: lider_proyecto || '',
         estado: estado || 'Caso_de_Negocio',
@@ -157,13 +156,24 @@ export const crearProyecto = async (req: AuthRequest, res: Response) => {
 };
 
 // UPDATE
-export const updateProyecto = async (req: AuthRequest, res: Response) => {
+export const updateProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   try {
+    const { fecha_inicio, fecha_fin, presupuesto, porcentaje_avance, costo_real, ...rest } = req.body;
+
+    // Normalizar tipos numéricos y fechas si vienen en el body de actualización
+    const dataToUpdate: any = { ...rest };
+    if (fecha_inicio) dataToUpdate.fecha_inicio = new Date(fecha_inicio);
+    if (fecha_fin) dataToUpdate.fecha_fin = new Date(fecha_fin);
+    if (presupuesto !== undefined) dataToUpdate.presupuesto = Number(presupuesto);
+    if (porcentaje_avance !== undefined) dataToUpdate.porcentaje_avance = Number(porcentaje_avance);
+    if (costo_real !== undefined) dataToUpdate.costo_real = Number(costo_real);
+
     const proyectoActualizado = await prisma.proyecto.update({
       where: { id },
-      data: req.body,
+      data: dataToUpdate,
     });
+
     res.status(200).json({ success: true, data: proyectoActualizado });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -171,11 +181,49 @@ export const updateProyecto = async (req: AuthRequest, res: Response) => {
 };
 
 // DELETE
-export const deleteProyecto = async (req: AuthRequest, res: Response) => {
+export const deleteProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   try {
     await prisma.proyecto.delete({ where: { id } });
     res.status(200).json({ success: true, message: 'Proyecto eliminado.' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// ACTUALIZAR ESTADO DE INICIATIVA / PROYECTO
+export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const id = String(req.params.id);
+    const { nuevoEstado } = req.body;
+    const usuarioRol = (req.usuario?.rol || '').toLowerCase().trim();
+
+    // Roles permitidos ampliados para incluir gestores o administradores
+    const rolesPermitidos = ['admin', 'pmo_manager', 'director', 'administrador', 'lider_pmo', 'gestor'];
+    
+    if (!usuarioRol || !rolesPermitidos.includes(usuarioRol)) {
+      res.status(403).json({ 
+        success: false, 
+        message: `Acceso denegado. El rol "${usuarioRol || 'desconocido'}" no cuenta con los privilegios necesarios.` 
+      });
+      return;
+    }
+
+    if (!nuevoEstado) {
+      res.status(400).json({ success: false, message: 'El nuevo estado es obligatorio.' });
+      return;
+    }
+
+    const proyectoActualizado = await prisma.proyecto.update({
+      where: { id },
+      data: { estado: nuevoEstado }
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Estado actualizado exitosamente',
+      data: proyectoActualizado
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

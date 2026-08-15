@@ -37,21 +37,20 @@ export default function ListaIniciativas() {
 
   const tieneRol = (rolesPermitidos) => {
     if (!user) return false;
-    const rolUsuario = (user.rol || user.role || '').toUpperCase();
-    return rolesPermitidos.some((r) => r.toUpperCase() === rolUsuario);
+    const rolUsuario = (user.rol || user.role || '').toLowerCase(); // Normalizamos a minúsculas
+    return rolesPermitidos.some((r) => r.toLowerCase() === rolUsuario);
   };
 
   useEffect(() => {
     cargarIniciativas();
-    }, []);
+  }, []);
 
-    const cargarIniciativas = async () => {
+  const cargarIniciativas = async () => {
     try {
       setLoading(true);
       setError('');
       const response = await api.get('/proyectos');
 
-      // Tu backend responde con { success: true, data: [...] }
       const responseData = response.data;
       
       let listaProyectos = [];
@@ -75,11 +74,11 @@ export default function ListaIniciativas() {
   const cambiarEstadoIniciativa = async (id, nuevoEstado) => {
     try {
       setProcesandoId(id);
-      await api.patch(`/proyectos/${id}`, { estado: nuevoEstado });
+      await api.patch(`/proyectos/${id}/estado`, { nuevoEstado });
       await cargarIniciativas();
     } catch (err) {
       console.error(`Error al cambiar estado a ${nuevoEstado}:`, err);
-      alert(err.response?.data?.mensaje || err.response?.data?.message || 'No se pudo actualizar el estado de la iniciativa.');
+      alert(err.response?.data?.message || err.response?.data?.error || 'No se pudo actualizar el estado de la iniciativa.');
     } finally {
       setProcesandoId(null);
     }
@@ -104,7 +103,7 @@ export default function ListaIniciativas() {
   };
 
   const iniciativasVisibles = iniciativas.filter((item) => {
-    if (!tieneRol(['ADMINISTRADOR', 'LIDER_PMO', 'ADMIN']) && item.solicitante_id && user?.id && item.solicitante_id !== user.id) {
+    if (!tieneRol(['admin', 'administrador', 'lider_pmo', 'pmo_manager', 'director']) && item.solicitante_id && user?.id && item.solicitante_id !== user.id) {
       return true;
     }
     return true;
@@ -215,6 +214,8 @@ export default function ListaIniciativas() {
     return estado.replace(/_/g, ' ');
   };
 
+  const esAdminOPmo = tieneRol(['admin', 'pmo_manager', 'director', 'administrador', 'lider_pmo']);
+
   return (
     <div className="p-6 bg-[#0B0A0F] min-h-screen text-white">
       <div className="max-w-7xl mx-auto">
@@ -252,7 +253,6 @@ export default function ListaIniciativas() {
               📥 Exportar CSV
             </button>
 
-            {/* Selector de Filtro de Estado */}
             <select
               value={filtroEstado}
               onChange={(e) => setFiltroEstado(e.target.value)}
@@ -367,60 +367,67 @@ export default function ListaIniciativas() {
                       </div>
                     </th>
 
-                    {tieneRol(['ADMINISTRADOR', 'LIDER_PMO', 'ADMIN']) && (
-                      <th className="py-4 px-6 text-right">Acciones</th>
-                    )}
+                    <th className="py-4 px-6 text-right">
+                      Acciones
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#2D2845]">
                   {iniciativasOrdenadas.length > 0 ? (
-                    iniciativasOrdenadas.map((item) => (
-                      <tr
-                        key={item.id || item.id_iniciativa}
-                        onClick={() => navigate(`/proyectos/${item.id || item.id_iniciativa}`)}
-                        className="hover:bg-[#1A1726]/50 transition-colors cursor-pointer"
-                      >
-                        <td className="py-4 px-6 font-medium text-white">
-                          <div className="font-semibold text-white">{item.nombre || item.titulo}</div>
-                          <div className="text-xs text-[#64748B]">{item.codigo || `INIC-${item.id}`}</div>
-                        </td>
-                        <td className="py-4 px-6 text-[#CBD5E1]">
-                          {item.solicitante?.nombre || item.nombre_solicitante || 'N/A'}
-                        </td>
-                        <td className="py-4 px-6 text-[#CBD5E1]">
-                          {/* Esto te imprimirá exactamente qué tiene el objeto en pantalla */}
-                          {item.solicitante?.departamento || item.departamento || item.area || 'General'}
-                        </td>
-                        <td className="py-4 px-6">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getBadgeColor(item.estado)}`}>
-                            {formatoNombreEstado(item.estado)}
-                          </span>
-                        </td>
-
-                        {tieneRol(['ADMINISTRADOR', 'LIDER_PMO', 'ADMIN']) && (
-                          <td className="py-4 px-6 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              disabled={procesandoId === (item.id || item.id_iniciativa)}
-                              onClick={() => cambiarEstadoIniciativa(item.id || item.id_iniciativa, 'Aprobado')}
-                              className="px-3 py-1 bg-[#22C55E]/20 text-[#22C55E] hover:bg-[#22C55E] hover:text-white rounded text-xs transition-colors disabled:opacity-50"
-                            >
-                              Aprobar
-                            </button>
-                            <button
-                              disabled={procesandoId === (item.id || item.id_iniciativa)}
-                              onClick={() => cambiarEstadoIniciativa(item.id || item.id_iniciativa, 'Rechazado')}
-                              className="px-3 py-1 bg-[#EF4444]/20 text-[#EF4444] hover:bg-[#EF4444] hover:text-white rounded text-xs transition-colors disabled:opacity-50"
-                            >
-                              Rechazar
-                            </button>
+                    iniciativasOrdenadas.map((item) => {
+                      const itemId = item.id || item.id_iniciativa;
+                      return (
+                        <tr
+                          key={itemId}
+                          onClick={() => navigate(`/proyectos/${itemId}`)}
+                          className="hover:bg-[#1A1726]/50 transition-colors cursor-pointer"
+                        >
+                          <td className="py-4 px-6 font-medium text-white">
+                            <div className="font-semibold text-white">{item.nombre || item.titulo}</div>
+                            <div className="text-xs text-[#64748B]">{item.codigo || `INIC-${itemId}`}</div>
                           </td>
-                        )}
-                      </tr>
-                    ))
+                          <td className="py-4 px-6 text-[#CBD5E1]">
+                            {item.solicitante?.nombre || item.nombre_solicitante || 'N/A'}
+                          </td>
+                          <td className="py-4 px-6 text-[#CBD5E1]">
+                            {item.solicitante?.departamento || item.departamento || item.area || 'General'}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${getBadgeColor(item.estado)}`}>
+                              {formatoNombreEstado(item.estado)}
+                            </span>
+                          </td>
+
+                          <td className="py-4 px-6 text-right space-x-2" onClick={(e) => e.stopPropagation()}>
+                            {esAdminOPmo ? (
+                              <select
+                                disabled={procesandoId === itemId}
+                                value={item.estado || 'Caso_de_Negocio'}
+                                onChange={(e) => cambiarEstadoIniciativa(itemId, e.target.value)}
+                                className="bg-[#1A1726] text-white border border-[#2D2845] rounded px-2 py-1 text-xs focus:outline-none focus:border-[#A855F7] cursor-pointer"
+                              >
+                                <option value="Caso_de_Negocio">Caso de Negocio</option>
+                                <option value="En_Revision">En Revisión</option>
+                                <option value="En_Proceso">En Proceso</option>
+                                <option value="Aprobado">Aprobado</option>
+                                <option value="Completado">Completado</option>
+                                <option value="En_Pausa">En Pausa</option>
+                                <option value="Rechazado">Rechazado</option>
+                              </select>
+                            ) : (
+                              <span className="text-xs text-[#64748B]">Solo lectura</span>
+                            )}
+                            {procesandoId === itemId && (
+                              <span className="ml-2 text-xs text-[#A855F7]">Guardando...</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td
-                        colSpan={tieneRol(['ADMINISTRADOR', 'LIDER_PMO', 'ADMIN']) ? 5 : 4}
+                        colSpan={5}
                         className="text-center py-12 text-[#64748B]"
                       >
                         No se encontraron iniciativas registradas con los filtros seleccionados.
@@ -447,7 +454,7 @@ export default function ListaIniciativas() {
             onClose={() => setIniciativaSeleccionada(null)}
             onAprobar={(id) => cambiarEstadoIniciativa(id, 'Aprobado')}
             onRechazar={(id) => cambiarEstadoIniciativa(id, 'Rechazado')}
-            esAdminOLider={tieneRol(['ADMINISTRADOR', 'LIDER_PMO', 'ADMIN'])}
+            esAdminOLider={esAdminOPmo}
           />
         )}
       </div>

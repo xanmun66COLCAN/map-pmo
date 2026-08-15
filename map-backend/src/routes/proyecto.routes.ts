@@ -5,7 +5,8 @@ import {
   crearProyecto, 
   getProyectoById,
   updateProyecto,
-  deleteProyecto
+  deleteProyecto,
+  actualizarEstadoIniciativa
 } from '../controllers/proyecto.controller'; 
 import verificarToken from '../middlewares/auth.middleware';
 
@@ -31,5 +32,8 @@ router.put('/:id', updateProyecto);
 
 // 6. Eliminar proyecto por ID
 router.delete('/:id', deleteProyecto);
+
+// Ruta PATCH para actualizar el estado con restricción de roles
+router.patch('/:id/estado', actualizarEstadoIniciativa);
 
 export default router;
