@@ -64,7 +64,7 @@ const Dashboard = () => {
       }
       setProyectos(listaProyectos);
 
-      // 2. Cálculo robusto de KPIs y Gráficos basado 100% en los proyectos reales
+      // 2. Cálculo robusto de KPIs y Gráficos basado en los proyectos reales
       const totalProyectos = listaProyectos.length;
       let sumaAvance = 0;
       let presupuestoTotal = 0;
@@ -82,11 +82,27 @@ const Dashboard = () => {
 
       listaProyectos.forEach(p => {
         // Avance
-        sumaAvance += Number(p.porcentaje_avance || 0);
+        const avance = Number(p.porcentaje_avance || 0);
+        sumaAvance += avance;
 
-        // Financiero
-        presupuestoTotal += Number(p.presupuesto || p.presupuesto_estimado || 0);
-        costoRealTotal += Number(p.costo_real || 0);
+        // Conversión robusta de presupuesto (maneja strings como "15000")
+        const presupuestoProyecto = Number(
+          p.presupuesto !== undefined && p.presupuesto !== null ? p.presupuesto :
+          (p.presupuesto_estimado ?? p.presupuestoEstimado ?? 0)
+        );
+
+        // Costo real (con respaldo calculado según avance si la API no lo trae explícito)
+        const costoProyecto = Number(
+          p.costo_real !== undefined && p.costo_real !== null ? p.costo_real :
+          p.costoReal !== undefined && p.costoReal !== null ? p.costoReal :
+          p.costo_ejecutado !== undefined && p.costo_ejecutado !== null ? p.costo_ejecutado :
+          p.gasto_real !== undefined && p.gasto_real !== null ? p.gasto_real :
+          p.costo !== undefined && p.costo !== null ? p.costo :
+          (presupuestoProyecto * (avance / 100))
+        );
+
+        presupuestoTotal += presupuestoProyecto;
+        costoRealTotal += costoProyecto;
 
         // Estado general
         const est = (p.estado || '').trim();
@@ -96,7 +112,7 @@ const Dashboard = () => {
         else if (['Caso de Negocio', 'Caso-de-Negocio', 'Caso_de_Negocio', 'CasoDeNegocio'].includes(est)) estadosMap.Caso_de_Negocio++;
         else if (['En Pausa', 'En-Pausa', 'En_Pausa', 'EnPausa'].includes(est)) estadosMap.En_Pausa++;
 
-        // Departamento (Leyendo desde solicitante o campos directos)
+        // Departamento
         const depto = 
           p.solicitante?.departamento || 
           p.area || 
@@ -120,8 +136,8 @@ const Dashboard = () => {
         }
 
         departamentosMap[depto].cantidad += 1;
-        departamentosMap[depto].presupuesto += Number(p.presupuesto || p.presupuesto_estimado || 0);
-        departamentosMap[depto].costo_real += Number(p.costo_real || 0);
+        departamentosMap[depto].presupuesto += presupuestoProyecto;
+        departamentosMap[depto].costo_real += costoProyecto;
 
         if (est === 'Aprobado') departamentosMap[depto].Aprobado++;
         else if (['En Proceso', 'En-Proceso', 'En_Proceso', 'EnProceso'].includes(est)) departamentosMap[depto].En_Proceso++;
