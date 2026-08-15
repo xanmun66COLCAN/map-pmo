@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   PieChart,
   Pie,
@@ -15,13 +15,12 @@ import {
 import NuevoProyecto from '../components/NuevoProyecto';
 import api from '../api/axiosInstance';
 
-// Mapeo de colores alineado con la paleta de MAP PMO
 const COLORS_ESTADO = {
-  Completado: '#22C55E',     // Verde
-  En_Proceso: '#3B82F6',     // Azul
-  Aprobado: '#A855F7',       // Púrpura
-  Caso_de_Negocio: '#F59E0B',// Ámbar
-  En_Pausa: '#EF4444'        // Rojo
+  Completado: '#22C55E',
+  En_Proceso: '#3B82F6',
+  Aprobado: '#A855F7',
+  Caso_de_Negocio: '#F59E0B',
+  En_Pausa: '#EF4444'
 };
 
 const Dashboard = () => {
@@ -30,89 +29,106 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Criterio de ordenamiento para tarjetas
+  const [criterioOrden, setCriterioOrden] = useState('fecha_desc');
+
   const navigate = useNavigate();
 
   const usuarioString = localStorage.getItem('usuario');
   const usuario = usuarioString ? JSON.parse(usuarioString) : null;
 
-  useEffect(() => {
-    let isMounted = true;
+  const cargarDatos = useCallback(async () => {
+    try {
+      setLoading(true);
 
-    const cargarDatos = async () => {
-      try {
-        setLoading(true);
+      const [resProyectos, resKpis] = await Promise.all([
+        api.get('/proyectos'),
+        api.get('/dashboard/kpis')
+      ]);
 
-        // Peticiones en paralelo: Proyectos + KPIs del Dashboard
-        const [resProyectos, resKpis] = await Promise.all([
-          api.get('/proyectos'),
-          api.get('/dashboard/kpis')
-        ]);
-
-        if (!isMounted) return;
-
-        // Procesa proyectos
-        const dataProyectos = resProyectos.data;
-        if (Array.isArray(dataProyectos)) {
-          setProyectos(dataProyectos);
-        } else if (dataProyectos && Array.isArray(dataProyectos.data)) {
-          setProyectos(dataProyectos.data);
-        } else if (dataProyectos && Array.isArray(dataProyectos.proyectos)) {
-          setProyectos(dataProyectos.proyectos);
-        } else {
-          setProyectos([]);
-        }
-
-        // Procesa KPIs
-        if (resKpis.data && resKpis.data.success) {
-          setKpiData(resKpis.data.data);
-        }
-
-        setError('');
-      } catch (err) {
-        if (!isMounted) return;
-
-        const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
-        setError(mensaje || 'Error al conectar con el servidor.');
-
-        if (err.response?.status === 401 || err.response?.status === 403 || mensaje?.includes("Token")) {
-          localStorage.clear();
-          navigate('/');
-        }
-      } finally {
-        if (isMounted) setLoading(false);
+      const dataProyectos = resProyectos.data;
+      if (Array.isArray(dataProyectos)) {
+        setProyectos(dataProyectos);
+      } else if (dataProyectos && Array.isArray(dataProyectos.data)) {
+        setProyectos(dataProyectos.data);
+      } else if (dataProyectos && Array.isArray(dataProyectos.proyectos)) {
+        setProyectos(dataProyectos.proyectos);
+      } else {
+        setProyectos([]);
       }
-    };
 
-    cargarDatos();
+      if (resKpis.data && resKpis.data.success) {
+        setKpiData(resKpis.data.data);
+      }
 
-    return () => {
-      isMounted = false;
-    };
+      setError('');
+    } catch (err) {
+      const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
+      setError(mensaje || 'Error al conectar con el servidor.');
+
+      if (err.response?.status === 401 || err.response?.status === 403 || mensaje?.includes("Token")) {
+        localStorage.clear();
+        navigate('/');
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [navigate]);
+
+  useEffect(() => {
+    cargarDatos();
+  }, [cargarDatos]);
 
   const handleLogout = () => {
     localStorage.clear();
     navigate('/');
   };
 
-  const handleProyectoCreado = (nuevoProyecto) => {
-    setProyectos((prevProyectos) => [nuevoProyecto, ...prevProyectos]);
+  const handleProyectoCreado = () => {
+    cargarDatos();
   };
 
-  // Formateador de moneda en pesos (COP)
   const formatCurrency = (val) =>
     new Intl.NumberFormat('es-CO', {
       style: 'currency',
       currency: 'COP',
       maximumFractionDigits: 0
-    }).format(val);
+    }).format(val || 0);
+
+  const ordenarProyectos = (lista) => {
+    if (!Array.isArray(lista)) return [];
+
+    return [...lista].sort((a, b) => {
+      switch (criterioOrden) {
+        case 'nombre_asc':
+          return (a.nombre || a.titulo || '').localeCompare(b.nombre || b.titulo || '');
+
+        case 'nombre_desc':
+          return (b.nombre || b.titulo || '').localeCompare(a.nombre || a.titulo || '');
+
+        case 'presupuesto_desc':
+          return (Number(b.presupuesto_estimado || b.presupuesto) || 0) - (Number(a.presupuesto_estimado || a.presupuesto) || 0);
+
+        case 'presupuesto_asc':
+          return (Number(a.presupuesto_estimado || a.presupuesto) || 0) - (Number(b.presupuesto_estimado || b.presupuesto) || 0);
+
+        case 'fecha_asc':
+          return new Date(a.fecha_creacion || a.createdAt || 0) - new Date(b.fecha_creacion || b.createdAt || 0);
+
+        case 'fecha_desc':
+        default:
+          return new Date(b.fecha_creacion || b.createdAt || 0) - new Date(a.fecha_creacion || a.createdAt || 0);
+      }
+    });
+  };
 
   return (
     <div className="min-h-screen bg-[#0B0A0F] text-white p-6 flex flex-col items-center">
       <div className="w-full max-w-6xl">
         
         {/* Encabezado Principal */}
-        <div className="flex justify-between items-center mb-8 border-b border-[#2D2845] pb-4">
+        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 border-b border-[#2D2845] pb-4 gap-4">
           <div>
             <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#A855F7] to-[#22C55E]">
               🚀 MAP PMO - DASHBOARD
@@ -124,13 +140,21 @@ const Dashboard = () => {
             )}
           </div>
           
-          <div className="flex gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => navigate('/iniciativas')}
+              className="text-xs bg-[#13111C] border border-[#A855F7]/40 hover:border-[#A855F7] text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-md flex items-center gap-2"
+            >
+              📂 Portafolio
+            </button>
+
             <button
               onClick={() => setIsModalOpen(true)}
               className="text-xs bg-gradient-to-r from-[#A855F7] to-[#7C3AED] hover:from-[#9333EA] hover:to-[#6D28D9] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-lg"
             >
               + Nueva Iniciativa
             </button>
+
             <button 
               onClick={handleLogout}
               className="text-xs bg-[#EF4444]/20 border border-[#EF4444]/40 hover:bg-[#EF4444] text-white px-4 py-2 rounded-lg transition-all"
@@ -146,7 +170,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Carga General */}
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-8 h-8 border-4 border-[#A855F7] border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -154,60 +177,50 @@ const Dashboard = () => {
           </div>
         ) : (
           <>
-            {/* SECCIÓN 1: TARJETAS DE KPIS */}
             {kpiData && (
               <div className="space-y-6 mb-10">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  
-                  {/* KPI 1 */}
                   <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg">
                     <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Total Iniciativas</p>
                     <p className="text-3xl font-black text-white mt-2">
-                      {kpiData.kpis.totalProyectos}
+                      {kpiData.kpis?.totalProyectos ?? 0}
                     </p>
                     <p className="text-[11px] text-[#94A3B8] mt-1">Registradas en el portafolio</p>
                   </div>
 
-                  {/* KPI 2 */}
                   <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg">
                     <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Avance Promedio</p>
                     <p className="text-3xl font-black text-[#A855F7] mt-2">
-                      {kpiData.kpis.avancePromedio}%
+                      {kpiData.kpis?.avancePromedio ?? 0}%
                     </p>
                     <div className="w-full bg-[#2D2845] h-2 rounded-full mt-3 overflow-hidden">
                       <div
                         className="bg-[#A855F7] h-full rounded-full transition-all duration-500"
-                        style={{ width: `${kpiData.kpis.avancePromedio}%` }}
+                        style={{ width: `${Math.min(kpiData.kpis?.avancePromedio || 0, 100)}%` }}
                       />
                     </div>
                   </div>
 
-                  {/* KPI 3 */}
                   <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg">
                     <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Presupuesto Total</p>
                     <p className="text-xl font-bold text-[#22C55E] mt-2">
-                      {formatCurrency(kpiData.kpis.presupuestoTotal)}
+                      {formatCurrency(kpiData.kpis?.presupuestoTotal)}
                     </p>
                     <p className="text-[11px] text-[#94A3B8] mt-1">Asignado a iniciativas</p>
                   </div>
 
-                  {/* KPI 4 */}
                   <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg">
                     <p className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">Ejecución Financiera</p>
                     <p className="text-xl font-bold text-amber-400 mt-2">
-                      {kpiData.kpis.ejecucionFinanciera}%
+                      {kpiData.kpis?.ejecucionFinanciera ?? 0}%
                     </p>
                     <p className="text-[11px] text-[#94A3B8] mt-1">
-                      Costo Real: {formatCurrency(kpiData.kpis.costoRealTotal)}
+                      Costo Real: {formatCurrency(kpiData.kpis?.costoRealTotal)}
                     </p>
                   </div>
-
                 </div>
 
-                {/* SECCIÓN 2: GRÁFICAS */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  
-                  {/* Dona - Estado de Proyectos */}
                   <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg lg:col-span-1">
                     <h2 className="text-sm font-bold text-[#94A3B8] uppercase tracking-wider mb-4">
                       Estado de Proyectos
@@ -216,7 +229,7 @@ const Dashboard = () => {
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
-                            data={kpiData.proyectosPorEstado}
+                            data={kpiData.proyectosPorEstado || []}
                             dataKey="cantidad"
                             nameKey="estado"
                             cx="50%"
@@ -225,7 +238,7 @@ const Dashboard = () => {
                             outerRadius={75}
                             paddingAngle={4}
                           >
-                            {kpiData.proyectosPorEstado.map((entry) => (
+                            {(kpiData.proyectosPorEstado || []).map((entry) => (
                               <Cell
                                 key={`cell-${entry.estado}`}
                                 fill={COLORS_ESTADO[entry.estado] || '#64748B'}
@@ -241,14 +254,13 @@ const Dashboard = () => {
                     </div>
                   </div>
 
-                  {/* Barras - Presupuesto vs Costo Real por Depto */}
                   <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg lg:col-span-2">
                     <h2 className="text-sm font-bold text-[#94A3B8] uppercase tracking-wider mb-4">
                       Presupuesto vs. Costo Real por Departamento
                     </h2>
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={kpiData.porDepartamento} margin={{ top: 10, right: 10, left: 15, bottom: 25 }}>
+                        <BarChart data={kpiData.porDepartamento || []} margin={{ top: 10, right: 10, left: 15, bottom: 25 }}>
                           <XAxis
                             dataKey="departamento"
                             stroke="#64748B"
@@ -273,16 +285,45 @@ const Dashboard = () => {
                       </ResponsiveContainer>
                     </div>
                   </div>
-
                 </div>
               </div>
             )}
 
-            {/* SECCIÓN 3: LISTADO DE INICIATIVAS */}
+            {/* Tarjetas + Control de ordenamiento + Enlace "Ver iniciativas en estudio →" */}
             <div className="border-t border-[#2D2845] pt-6">
-              <h2 className="text-xl font-bold text-white mb-6">
-                📋 Listado de Iniciativas
-              </h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h2 className="text-xl font-bold text-white">
+                  📋 Iniciativas Recientes
+                </h2>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <label htmlFor="ordenar-dash" className="text-xs text-[#94A3B8]">
+                      Ordenar:
+                    </label>
+                    <select
+                      id="ordenar-dash"
+                      value={criterioOrden}
+                      onChange={(e) => setCriterioOrden(e.target.value)}
+                      className="bg-[#13111C] border border-[#2D2845] text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-[#A855F7]"
+                    >
+                      <option value="fecha_desc">📅 Más recientes</option>
+                      <option value="fecha_asc">📅 Más antiguas</option>
+                      <option value="nombre_asc">🔤 Nombre (A - Z)</option>
+                      <option value="nombre_desc">🔤 Nombre (Z - A)</option>
+                      <option value="presupuesto_desc">💰 Mayor Presupuesto</option>
+                      <option value="presupuesto_asc">💰 Menor Presupuesto</option>
+                    </select>
+                  </div>
+
+                  <Link
+                    to="/iniciativas?filtro=en_estudio"
+                    className="text-xs text-[#A855F7] hover:text-[#9333EA] font-semibold transition-colors flex items-center gap-1"
+                  >
+                    Ver iniciativas en estudio →
+                  </Link>
+                </div>
+              </div>
 
               {proyectos.length === 0 ? (
                 <div className="text-center py-16 bg-[#13111C] border border-[#2D2845] rounded-xl">
@@ -290,7 +331,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {proyectos.map((proyecto) => (
+                  {ordenarProyectos(proyectos).slice(0, 4).map((proyecto) => (
                     <div 
                       key={proyecto.id || proyecto.id_iniciativa} 
                       onClick={() => navigate(`/proyectos/${proyecto.id || proyecto.id_iniciativa}`)}

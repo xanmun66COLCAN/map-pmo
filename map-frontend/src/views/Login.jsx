@@ -41,15 +41,15 @@ export default function Login() {
         throw new Error('La respuesta del servidor no incluyó un token o usuario válido.');
       }
 
-      // 1. Guardar primero en localStorage de forma sincrónica
+      // Extraer el nombre del rol (ej: 'ADMINISTRADOR', 'LIDER_PMO')
+      const rolEnTexto = usuarioAGuardar.rol || usuarioAGuardar.id_rol || 'SOLICITANTE';
+
+      // 1. Guardar en localStorage de forma sincrónica
       localStorage.setItem('token', tokenAGuardar);
       localStorage.setItem('usuario', JSON.stringify(usuarioAGuardar));
-      if (usuarioAGuardar.id_rol) {
-        localStorage.setItem('user_role', String(usuarioAGuardar.id_rol));
-      }
+      localStorage.setItem('user_role', String(rolEnTexto));
 
-      // 2. Disparar el login en AuthContext.
-      // El useEffect de arriba detectará cuando `isAuthenticated` pase a true y redirigirá de forma limpia.
+      // 2. Disparar el login en AuthContext
       login(tokenAGuardar, usuarioAGuardar);
 
     } catch (err) {
@@ -68,7 +68,7 @@ export default function Login() {
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-[#A855F7]/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-[#22C55E]/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        {/* Encabezado */}
+        {/* Encabezado MAP PMO */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-[#A855F7] to-[#22C55E]">
             MAP PMO

@@ -4,6 +4,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Login from './views/Login'; 
 import Dashboard from './views/Dashboard'; 
 import DetalleProyecto from './views/DetalleProyecto'; 
+import ListaIniciativas from './views/ListaIniciativas'; // <--- Importamos la vista
 
 function App() {
   return (
@@ -13,6 +14,9 @@ function App() {
       
       {/* Ruta para tu Dashboard */}
       <Route path="/dashboard" element={<Dashboard />} />
+
+      {/* Ruta para el Portafolio de Iniciativas */}
+      <Route path="/iniciativas" element={<ListaIniciativas />} /> 
 
       {/* Ruta para detalle de proyecto */}
       <Route path="/proyectos/:id" element={<DetalleProyecto />} />
