@@ -13,7 +13,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import NuevoProyecto from '../components/NuevoProyecto';
-import LogoMarca from '../components/LogoMarca';
+import logoMapPmo from '../assets/logo-map-pmo.png';
 import api from '../api/axiosInstance';
 
 const COLORS_ESTADO = {
@@ -31,7 +31,10 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Criterio de ordenamiento para tarjetas
   const [criterioOrden, setCriterioOrden] = useState('fecha_desc');
+
+  // Filtros de búsqueda y estado
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
 
@@ -46,23 +49,108 @@ const Dashboard = () => {
 
       const [resProyectos, resKpis] = await Promise.all([
         api.get('/proyectos'),
-        api.get('/dashboard/kpis')
+        api.get('/dashboard/kpis').catch(() => ({ data: null }))
       ]);
 
-      const dataProyectos = resProyectos.data;
-      if (Array.isArray(dataProyectos)) {
-        setProyectos(dataProyectos);
-      } else if (dataProyectos && Array.isArray(dataProyectos.data)) {
-        setProyectos(dataProyectos.data);
-      } else if (dataProyectos && Array.isArray(dataProyectos.proyectos)) {
-        setProyectos(dataProyectos.proyectos);
-      } else {
-        setProyectos([]);
+      // 1. Extracción segura de la lista de proyectos
+      const dataProyectosRes = resProyectos.data;
+      let listaProyectos = [];
+      if (Array.isArray(dataProyectosRes)) {
+        listaProyectos = dataProyectosRes;
+      } else if (dataProyectosRes && Array.isArray(dataProyectosRes.data)) {
+        listaProyectos = dataProyectosRes.data;
+      } else if (dataProyectosRes && Array.isArray(dataProyectosRes.proyectos)) {
+        listaProyectos = dataProyectosRes.proyectos;
       }
+      setProyectos(listaProyectos);
 
-      if (resKpis.data && resKpis.data.success) {
-        setKpiData(resKpis.data.data);
-      }
+      // 2. Cálculo robusto de KPIs y Gráficos basado 100% en los proyectos reales
+      const totalProyectos = listaProyectos.length;
+      let sumaAvance = 0;
+      let presupuestoTotal = 0;
+      let costoRealTotal = 0;
+
+      const estadosMap = {
+        Aprobado: 0,
+        En_Proceso: 0,
+        Completado: 0,
+        Caso_de_Negocio: 0,
+        En_Pausa: 0
+      };
+
+      const departamentosMap = {};
+
+      listaProyectos.forEach(p => {
+        // Avance
+        sumaAvance += Number(p.porcentaje_avance || 0);
+
+        // Financiero
+        presupuestoTotal += Number(p.presupuesto || p.presupuesto_estimado || 0);
+        costoRealTotal += Number(p.costo_real || 0);
+
+        // Estado general
+        const est = (p.estado || '').trim();
+        if (est === 'Aprobado') estadosMap.Aprobado++;
+        else if (['En Proceso', 'En-Proceso', 'En_Proceso', 'EnProceso'].includes(est)) estadosMap.En_Proceso++;
+        else if (est === 'Completado') estadosMap.Completado++;
+        else if (['Caso de Negocio', 'Caso-de-Negocio', 'Caso_de_Negocio', 'CasoDeNegocio'].includes(est)) estadosMap.Caso_de_Negocio++;
+        else if (['En Pausa', 'En-Pausa', 'En_Pausa', 'EnPausa'].includes(est)) estadosMap.En_Pausa++;
+
+        // Departamento (Leyendo desde solicitante o campos directos)
+        const depto = 
+          p.solicitante?.departamento || 
+          p.area || 
+          p.departamento || 
+          p.nombre_departamento || 
+          p.gerencia || 
+          'General';
+
+        if (!departamentosMap[depto]) {
+          departamentosMap[depto] = {
+            departamento: depto,
+            cantidad: 0,
+            presupuesto: 0,
+            costo_real: 0,
+            Aprobado: 0,
+            En_Proceso: 0,
+            Completado: 0,
+            Caso_de_Negocio: 0,
+            En_Pausa: 0
+          };
+        }
+
+        departamentosMap[depto].cantidad += 1;
+        departamentosMap[depto].presupuesto += Number(p.presupuesto || p.presupuesto_estimado || 0);
+        departamentosMap[depto].costo_real += Number(p.costo_real || 0);
+
+        if (est === 'Aprobado') departamentosMap[depto].Aprobado++;
+        else if (['En Proceso', 'En-Proceso', 'En_Proceso', 'EnProceso'].includes(est)) departamentosMap[depto].En_Proceso++;
+        else if (est === 'Completado') departamentosMap[depto].Completado++;
+        else if (['Caso de Negocio', 'Caso-de-Negocio', 'Caso_de_Negocio', 'CasoDeNegocio'].includes(est)) departamentosMap[depto].Caso_de_Negocio++;
+        else if (['En Pausa', 'En-Pausa', 'En_Pausa', 'EnPausa'].includes(est)) departamentosMap[depto].En_Pausa++;
+      });
+
+      const avancePromedio = totalProyectos > 0 ? Math.round(sumaAvance / totalProyectos) : 0;
+      const ejecucionFinanciera = presupuestoTotal > 0 ? Math.round((costoRealTotal / presupuestoTotal) * 100) : 0;
+
+      const proyectosPorEstado = Object.keys(estadosMap).map(est => ({
+        estado: est,
+        cantidad: estadosMap[est]
+      })).filter(item => item.cantidad > 0);
+
+      const porDepartamento = Object.values(departamentosMap);
+
+      setKpiData({
+        kpis: {
+          totalProyectos,
+          avancePromedio,
+          presupuestoTotal,
+          costoRealTotal,
+          ejecucionFinanciera
+        },
+        proyectosPorEstado,
+        porDepartamento
+      });
 
       setError('');
     } catch (err) {
@@ -105,14 +193,19 @@ const Dashboard = () => {
       switch (criterioOrden) {
         case 'nombre_asc':
           return (a.nombre || a.titulo || '').localeCompare(b.nombre || b.titulo || '');
+
         case 'nombre_desc':
           return (b.nombre || b.titulo || '').localeCompare(a.nombre || a.titulo || '');
+
         case 'presupuesto_desc':
           return (Number(b.presupuesto_estimado || b.presupuesto) || 0) - (Number(a.presupuesto_estimado || a.presupuesto) || 0);
+
         case 'presupuesto_asc':
           return (Number(a.presupuesto_estimado || a.presupuesto) || 0) - (Number(b.presupuesto_estimado || b.presupuesto) || 0);
+
         case 'fecha_asc':
           return new Date(a.fecha_creacion || a.createdAt || 0) - new Date(b.fecha_creacion || b.createdAt || 0);
+
         case 'fecha_desc':
         default:
           return new Date(b.fecha_creacion || b.createdAt || 0) - new Date(a.fecha_creacion || a.createdAt || 0);
@@ -135,17 +228,24 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#0B0A0F] text-white p-6 flex flex-col items-center">
       <div className="w-full max-w-6xl">
         
-        {/* Encabezado Principal con el Logotipo */}
+        {/* Encabezado Principal */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 border-b border-[#2D2845] pb-4 gap-4">
           <div className="flex items-center gap-4">
-            <LogoMarca conTexto={true} />
-            
-            {usuario && (
-              <div className="hidden sm:block border-l border-[#2D2845] pl-4">
-                <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Sesión Activa</p>
-                <p className="text-xs text-[#A855F7] font-bold">{usuario.nombre || usuario.correo}</p>
-              </div>
-            )}
+            <img 
+              src={logoMapPmo} 
+              alt="MAP PMO Logo" 
+              className="h-12 w-auto object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.3)]"
+            />
+            <div>
+              <h1 className="text-xl font-black text-white tracking-wider">
+                MAP <span className="text-[#A855F7]">PMO</span>
+              </h1>
+              {usuario && (
+                <p className="text-[#94A3B8] text-xs mt-0.5">
+                  Bienvenido, <span className="text-[#A855F7] font-bold">{usuario.nombre || usuario.correo}</span>
+                </p>
+              )}
+            </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-3">
@@ -228,47 +328,92 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg lg:col-span-1">
-                    <h2 className="text-sm font-bold text-[#94A3B8] uppercase tracking-wider mb-4">
-                      Estado de Proyectos
-                    </h2>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={kpiData.proyectosPorEstado || []}
-                            dataKey="cantidad"
-                            nameKey="estado"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={45}
-                            outerRadius={75}
-                            paddingAngle={4}
-                          >
-                            {(kpiData.proyectosPorEstado || []).map((entry) => (
-                              <Cell
-                                key={`cell-${entry.estado}`}
-                                fill={COLORS_ESTADO[entry.estado] || '#64748B'}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            contentStyle={{ backgroundColor: '#13111C', borderColor: '#2D2845', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
-                          />
-                          <Legend wrapperStyle={{ fontSize: '11px', color: '#94A3B8' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                {/* SECCIÓN DE GRÁFICOS */}
+                <div className="space-y-6">
+                  
+                  {/* Fila Superior */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    
+                    {/* Gráfico 1: Estado de Proyectos (Pie) */}
+                    <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg">
+                      <h2 className="text-sm font-bold text-[#94A3B8] uppercase tracking-wider mb-4">
+                        Estado de Proyectos
+                      </h2>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={kpiData.proyectosPorEstado || []}
+                              dataKey="cantidad"
+                              nameKey="estado"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={45}
+                              outerRadius={75}
+                              paddingAngle={4}
+                            >
+                              {(kpiData.proyectosPorEstado || []).map((entry) => (
+                                <Cell
+                                  key={`cell-${entry.estado}`}
+                                  fill={COLORS_ESTADO[entry.estado] || '#64748B'}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              contentStyle={{ backgroundColor: '#13111C', borderColor: '#2D2845', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '11px', color: '#94A3B8' }} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
                     </div>
+
+                    {/* Gráfico 2: Presupuesto vs Costo Real */}
+                    <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg">
+                      <h2 className="text-sm font-bold text-[#94A3B8] uppercase tracking-wider mb-4">
+                        Presupuesto vs. Costo Real por Departamento
+                      </h2>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={kpiData.porDepartamento || []} margin={{ top: 10, right: 10, left: 15, bottom: 25 }}>
+                            <XAxis
+                              dataKey="departamento"
+                              stroke="#64748B"
+                              fontSize={10}
+                              interval={0}
+                              angle={-20}
+                              textAnchor="end"
+                            />
+                            <YAxis
+                              stroke="#64748B"
+                              fontSize={10}
+                              tickFormatter={(val) => `$${val / 1000000}M`}
+                            />
+                            <Tooltip
+                              formatter={(value) => formatCurrency(Number(value))}
+                              contentStyle={{ backgroundColor: '#13111C', borderColor: '#2D2845', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '11px', color: '#94A3B8' }} verticalAlign="top" />
+                            <Bar dataKey="presupuesto" name="Presupuesto" fill="#22C55E" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="costo_real" name="Costo Real" fill="#A855F7" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
                   </div>
 
-                  <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg lg:col-span-2">
+                  {/* Fila Inferior: Iniciativas por Departamento Apiladas por Estado */}
+                  <div className="bg-[#13111C] border border-[#2D2845] p-5 rounded-xl shadow-lg w-full">
                     <h2 className="text-sm font-bold text-[#94A3B8] uppercase tracking-wider mb-4">
-                      Presupuesto vs. Costo Real por Departamento
+                      Iniciativas por Departamento (Desglose por Estado)
                     </h2>
-                    <div className="h-64">
+                    <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={kpiData.porDepartamento || []} margin={{ top: 10, right: 10, left: 15, bottom: 25 }}>
+                        <BarChart 
+                          data={kpiData?.porDepartamento || []} 
+                          margin={{ top: 10, right: 10, left: -15, bottom: 25 }}
+                        >
                           <XAxis
                             dataKey="departamento"
                             stroke="#64748B"
@@ -280,25 +425,38 @@ const Dashboard = () => {
                           <YAxis
                             stroke="#64748B"
                             fontSize={10}
-                            tickFormatter={(val) => `$${val / 1000000}M`}
+                            allowDecimals={false}
                           />
                           <Tooltip
-                            formatter={(value) => formatCurrency(Number(value))}
-                            contentStyle={{ backgroundColor: '#13111C', borderColor: '#2D2845', borderRadius: '8px', color: '#fff', fontSize: '12px' }}
+                            formatter={(value, name) => [`${value} iniciativas`, name]}
+                            contentStyle={{ 
+                              backgroundColor: '#13111C', 
+                              borderColor: '#2D2845', 
+                              borderRadius: '8px', 
+                              color: '#fff', 
+                              fontSize: '12px' 
+                            }}
                           />
                           <Legend wrapperStyle={{ fontSize: '11px', color: '#94A3B8' }} verticalAlign="top" />
-                          <Bar dataKey="presupuesto" name="Presupuesto" fill="#22C55E" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="costo_real" name="Costo Real" fill="#A855F7" radius={[4, 4, 0, 0]} />
+                          
+                          <Bar dataKey="Aprobado" name="Aprobado" stackId="a" fill={COLORS_ESTADO.Aprobado} />
+                          <Bar dataKey="En_Proceso" name="En Proceso" stackId="a" fill={COLORS_ESTADO.En_Proceso} />
+                          <Bar dataKey="Completado" name="Completado" stackId="a" fill={COLORS_ESTADO.Completado} />
+                          <Bar dataKey="Caso_de_Negocio" name="Caso de Negocio" stackId="a" fill={COLORS_ESTADO.Caso_de_Negocio} />
+                          <Bar dataKey="En_Pausa" name="En Pausa" stackId="a" fill={COLORS_ESTADO.En_Pausa} radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
+
                 </div>
+
               </div>
             )}
 
             {/* SECCIÓN DE FILTROS Y TARJETAS */}
             <div className="border-t border-[#2D2845] pt-6">
+              
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-[#13111C] border border-[#2D2845] p-4 rounded-xl">
                 <div className="w-full md:w-1/2">
                   <input
