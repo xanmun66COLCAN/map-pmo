@@ -13,6 +13,7 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import NuevoProyecto from '../components/NuevoProyecto';
+import LogoMarca from '../components/LogoMarca';
 import api from '../api/axiosInstance';
 
 const COLORS_ESTADO = {
@@ -30,10 +31,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Criterio de ordenamiento para tarjetas
   const [criterioOrden, setCriterioOrden] = useState('fecha_desc');
-
-  // Filtros de búsqueda y estado
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
 
@@ -107,19 +105,14 @@ const Dashboard = () => {
       switch (criterioOrden) {
         case 'nombre_asc':
           return (a.nombre || a.titulo || '').localeCompare(b.nombre || b.titulo || '');
-
         case 'nombre_desc':
           return (b.nombre || b.titulo || '').localeCompare(a.nombre || a.titulo || '');
-
         case 'presupuesto_desc':
           return (Number(b.presupuesto_estimado || b.presupuesto) || 0) - (Number(a.presupuesto_estimado || a.presupuesto) || 0);
-
         case 'presupuesto_asc':
           return (Number(a.presupuesto_estimado || a.presupuesto) || 0) - (Number(b.presupuesto_estimado || b.presupuesto) || 0);
-
         case 'fecha_asc':
           return new Date(a.fecha_creacion || a.createdAt || 0) - new Date(b.fecha_creacion || b.createdAt || 0);
-
         case 'fecha_desc':
         default:
           return new Date(b.fecha_creacion || b.createdAt || 0) - new Date(a.fecha_creacion || a.createdAt || 0);
@@ -127,7 +120,6 @@ const Dashboard = () => {
     });
   };
 
-  // Filtrado de proyectos en base a búsqueda y estado
   const proyectosFiltrados = proyectos.filter((proyecto) => {
     const cumpleBusqueda = 
       (proyecto.nombre && proyecto.nombre.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -143,16 +135,16 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#0B0A0F] text-white p-6 flex flex-col items-center">
       <div className="w-full max-w-6xl">
         
-        {/* Encabezado Principal */}
+        {/* Encabezado Principal con el Logotipo */}
         <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 border-b border-[#2D2845] pb-4 gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-[#A855F7] to-[#22C55E]">
-              🚀 MAP PMO - DASHBOARD
-            </h1>
+          <div className="flex items-center gap-4">
+            <LogoMarca conTexto={true} />
+            
             {usuario && (
-              <p className="text-[#94A3B8] text-sm mt-1">
-                Bienvenido de vuelta, <span className="text-[#A855F7] font-bold">{usuario.nombre || usuario.correo}</span>
-              </p>
+              <div className="hidden sm:block border-l border-[#2D2845] pl-4">
+                <p className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-semibold">Sesión Activa</p>
+                <p className="text-xs text-[#A855F7] font-bold">{usuario.nombre || usuario.correo}</p>
+              </div>
             )}
           </div>
           
@@ -307,11 +299,7 @@ const Dashboard = () => {
 
             {/* SECCIÓN DE FILTROS Y TARJETAS */}
             <div className="border-t border-[#2D2845] pt-6">
-              
-              {/* Barra de Filtros interactiva */}
               <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6 bg-[#13111C] border border-[#2D2845] p-4 rounded-xl">
-                
-                {/* Input de Búsqueda */}
                 <div className="w-full md:w-1/2">
                   <input
                     type="text"
@@ -322,7 +310,6 @@ const Dashboard = () => {
                   />
                 </div>
 
-                {/* Selectores de Estado y Ordenamiento */}
                 <div className="w-full md:w-1/2 flex flex-wrap items-center justify-end gap-3">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-[#94A3B8] font-semibold whitespace-nowrap">Estado:</span>
@@ -356,7 +343,6 @@ const Dashboard = () => {
                     </select>
                   </div>
                 </div>
-
               </div>
 
               <div className="flex justify-between items-center mb-6">
