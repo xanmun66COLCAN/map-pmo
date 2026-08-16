@@ -19,6 +19,13 @@ const ListaIniciativas = () => {
 
   const navigate = useNavigate();
 
+  // Obtenemos el usuario logueado almacenado al iniciar sesión
+  const usuarioLogueado = JSON.parse(localStorage.getItem('usuario')) || {};
+  
+  // Definimos qué roles tienen privilegios para cambiar estados o ver acciones avanzadas
+  // Administrador y Líder de PMO tienen acceso total; Analista y Revisor/Sponsor tienen menos privilegios.
+  const tienePrivilegiosAltos = ['ADMINISTRADOR', 'LIDER_PMO'].includes(usuarioLogueado.rol);
+
   const cargarIniciativas = useCallback(async () => {
     try {
       setCargando(true);
@@ -41,7 +48,6 @@ const ListaIniciativas = () => {
   const cambiarEstadoIniciativa = async (itemId, nuevoEstado) => {
     try {
       setProcesandoId(itemId);
-      // Envía 'nuevoEstado' tal como lo espera el controlador TypeScript
       await api.patch(`/proyectos/${itemId}/estado`, { nuevoEstado });
       
       setIniciativas(prev => 
@@ -184,6 +190,7 @@ const ListaIniciativas = () => {
                     {columnaOrden === 'estado' && (direccion === 'asc' ? '▲' : '▼')}
                   </div>
                 </th>
+                {/* Ocultamos o adaptamos la columna de acciones si no tiene privilegios */}
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
@@ -221,7 +228,7 @@ const ListaIniciativas = () => {
                           item.estado === 'Completado' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                           item.estado === 'Caso_de_Negocio' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
                           item.estado === 'En_Pausa' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                          'bg-slate-500/10 text-slate-400 border border-slate-500/20' // Cancelado
+                          'bg-slate-500/10 text-slate-400 border border-slate-500/20'
                         }`}>
                           {item.estado === 'Caso_de_Negocio' ? 'Caso de Negocio' : 
                            item.estado === 'En_Proceso' ? 'En Proceso' : 
@@ -230,19 +237,25 @@ const ListaIniciativas = () => {
                         </span>
                       </td>
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          disabled={procesandoId === itemId}
-                          value={item.estado || 'Caso_de_Negocio'}
-                          onChange={(e) => cambiarEstadoIniciativa(itemId, e.target.value)}
-                          className="bg-[#0B0A0F] text-white border border-[#2D2845] rounded-md px-2 py-1 text-xs focus:outline-none focus:border-[#A855F7] cursor-pointer disabled:opacity-50"
-                        >
-                          <option value="Caso_de_Negocio">Caso de Negocio</option>
-                          <option value="Aprobado">Aprobado</option>
-                          <option value="En_Proceso">En Proceso</option>
-                          <option value="En_Pausa">En Pausa</option>
-                          <option value="Completado">Completado</option>
-                          <option value="Cancelado">Cancelado</option>
-                        </select>
+                        {tienePrivilegiosAltos ? (
+                          /* Selector habilitado solo para Administrador y Líder de PMO */
+                          <select
+                            disabled={procesandoId === itemId}
+                            value={item.estado || 'Caso_de_Negocio'}
+                            onChange={(e) => cambiarEstadoIniciativa(itemId, e.target.value)}
+                            className="bg-[#0B0A0F] text-white border border-[#2D2845] rounded-md px-2 py-1 text-xs focus:outline-none focus:border-[#A855F7] cursor-pointer disabled:opacity-50"
+                          >
+                            <option value="Caso_de_Negocio">Caso de Negocio</option>
+                            <option value="Aprobado">Aprobado</option>
+                            <option value="En_Proceso">En Proceso</option>
+                            <option value="En_Pausa">En Pausa</option>
+                            <option value="Completado">Completado</option>
+                            <option value="Cancelado">Cancelado</option>
+                          </select>
+                        ) : (
+                          /* Si no tiene privilegios, no se renderiza nada en la columna de acciones */
+                          null
+                        )}
                       </td>
                     </tr>
                   );

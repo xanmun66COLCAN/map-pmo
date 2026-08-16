@@ -1,3 +1,4 @@
+// src/views/Dashboard.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
@@ -13,7 +14,6 @@ import {
   ResponsiveContainer
 } from 'recharts';
 import NuevoProyecto from '../components/NuevoProyecto';
-import logoMapPmo from '../assets/logo-map-pmo.png';
 import api from '../api/axiosInstance';
 
 const COLORS_ESTADO = {
@@ -39,9 +39,6 @@ const Dashboard = () => {
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
 
   const navigate = useNavigate();
-
-  const usuarioString = localStorage.getItem('usuario');
-  const usuario = usuarioString ? JSON.parse(usuarioString) : null;
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -186,11 +183,6 @@ const Dashboard = () => {
     cargarDatos();
   }, [cargarDatos]);
 
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/');
-  };
-
   const handleProyectoCreado = () => {
     cargarDatos();
   };
@@ -244,48 +236,21 @@ const Dashboard = () => {
     <div className="min-h-screen bg-[#0B0A0F] text-white p-6 flex flex-col items-center">
       <div className="w-full max-w-6xl">
         
-        {/* Encabezado Principal */}
-        <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-8 border-b border-[#2D2845] pb-4 gap-4">
-          <div className="flex items-center gap-4">
-            <img 
-              src={logoMapPmo} 
-              alt="MAP PMO Logo" 
-              className="h-12 w-auto object-contain drop-shadow-[0_0_10px_rgba(168,85,247,0.3)]"
-            />
-            <div>
-              <h1 className="text-xl font-black text-white tracking-wider">
-                MAP <span className="text-[#A855F7]">PMO</span>
-              </h1>
-              {usuario && (
-                <p className="text-[#94A3B8] text-xs mt-0.5">
-                  Bienvenido, <span className="text-[#A855F7] font-bold">{usuario.nombre || usuario.correo}</span>
-                </p>
-              )}
-            </div>
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => navigate('/iniciativas')}
-              className="text-xs bg-[#13111C] border border-[#A855F7]/40 hover:border-[#A855F7] text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-md flex items-center gap-2"
-            >
-              📂 Portafolio
-            </button>
+        {/* Botones de acción principales de la vista (El Navbar Global maneja el título y usuario arriba) */}
+        <div className="flex justify-end items-center gap-3 mb-8 pt-2">
+          <button
+            onClick={() => navigate('/iniciativas')}
+            className="text-xs bg-[#13111C] border border-[#A855F7]/40 hover:border-[#A855F7] text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-md flex items-center gap-2"
+          >
+            📂 Portafolio
+          </button>
 
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="text-xs bg-gradient-to-r from-[#A855F7] to-[#7C3AED] hover:from-[#9333EA] hover:to-[#6D28D9] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-lg"
-            >
-              + Nueva Iniciativa
-            </button>
-
-            <button 
-              onClick={handleLogout}
-              className="text-xs bg-[#EF4444]/20 border border-[#EF4444]/40 hover:bg-[#EF4444] text-white px-4 py-2 rounded-lg transition-all"
-            >
-              Cerrar Sesión
-            </button>
-          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="text-xs bg-gradient-to-r from-[#A855F7] to-[#7C3AED] hover:from-[#9333EA] hover:to-[#6D28D9] text-white font-bold px-4 py-2 rounded-lg transition-all shadow-lg"
+          >
+            + Nueva Iniciativa
+          </button>
         </div>
 
         {error && (
