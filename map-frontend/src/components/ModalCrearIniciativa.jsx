@@ -10,6 +10,7 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
     descripcion: '',
     area: 'Tecnología',
     prioridad: 'MEDIA',
+    estado: 'Caso_de_Negocio', // Estado inicial por defecto
     presupuesto_estimado: '',
   });
 
@@ -38,6 +39,7 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
         descripcion: formData.descripcion,
         departamento: formData.area, // Mapeamos 'area' del formulario al campo 'departamento' de Prisma
         prioridad: formData.prioridad,
+        estado: formData.estado, // Enviamos el estado seleccionado
         solicitante_id: user?.id,
         presupuesto_estimado: formData.presupuesto_estimado
           ? Number(formData.presupuesto_estimado)
@@ -52,6 +54,7 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
         descripcion: '',
         area: 'Tecnología',
         prioridad: 'MEDIA',
+        estado: 'Caso_de_Negocio',
         presupuesto_estimado: '',
       });
 
@@ -112,8 +115,8 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
             />
           </div>
 
-          {/* Área y Prioridad */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Área, Prioridad y Estado */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-[#CBD5E1] mb-1">
                 Área Solicitante
@@ -134,7 +137,7 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
 
             <div>
               <label className="block text-sm font-medium text-[#CBD5E1] mb-1">
-                Prioridad Sugerida
+                Prioridad
               </label>
               <select
                 name="prioridad"
@@ -146,6 +149,25 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
                 <option value="MEDIA">Media</option>
                 <option value="ALTA">Alta</option>
                 <option value="CRITICA">Crítica</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#CBD5E1] mb-1">
+                Estado Inicial
+              </label>
+              <select
+                name="estado"
+                value={formData.estado}
+                onChange={handleChange}
+                className="w-full bg-[#1A1726] border border-[#2D2845] text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-[#A855F7]"
+              >
+                <option value="Caso_de_Negocio">Caso de Negocio</option>
+                <option value="Aprobado">Aprobado</option>
+                <option value="En_Proceso">En Proceso</option>
+                <option value="En_Pausa">En Pausa</option>
+                <option value="Completado">Completado</option>
+                <option value="Cancelado">Cancelado</option>
               </select>
             </div>
           </div>

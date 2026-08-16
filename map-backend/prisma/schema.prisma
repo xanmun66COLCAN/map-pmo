@@ -102,13 +102,10 @@ model roles {
   usuarios   Usuario[]
 }
 
-enum EstadoProyecto {
-  Idea
-  Evaluacion
+enum estado_proyecto_enum {
   Caso_de_Negocio
   Aprobado
-  Rechazado
-  En_Ejecucion
+  En_Proceso
   En_Pausa
   Completado
   Cancelado

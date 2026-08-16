@@ -133,12 +133,11 @@ const ListaIniciativas = () => {
             >
               <option value="TODOS">Todos los estados</option>
               <option value="Caso_de_Negocio">Caso de Negocio</option>
-              <option value="En_Revision">En Revisión</option>
-              <option value="En_Proceso">En Proceso</option>
               <option value="Aprobado">Aprobado</option>
-              <option value="Completado">Completado</option>
+              <option value="En_Proceso">En Proceso</option>
               <option value="En_Pausa">En Pausa</option>
-              <option value="Rechazado">Rechazado</option>
+              <option value="Completado">Completado</option>
+              <option value="Cancelado">Cancelado</option>
             </select>
           </div>
         </div>
@@ -217,17 +216,17 @@ const ListaIniciativas = () => {
                       </td>
                       <td className="p-4" onClick={(e) => e.stopPropagation()}>
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1.5 ${
-                          item.estado === 'Aprobado' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                          item.estado === 'Rechazado' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                          item.estado === 'Aprobado' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
                           item.estado === 'En_Proceso' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                          item.estado === 'En_Revision' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                          item.estado === 'Completado' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                          'bg-[#A855F7]/10 text-[#A855F7] border border-[#A855F7]/20'
+                          item.estado === 'Completado' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          item.estado === 'Caso_de_Negocio' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                          item.estado === 'En_Pausa' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                          'bg-slate-500/10 text-slate-400 border border-slate-500/20' // Cancelado
                         }`}>
-                          {item.estado === 'En_Revision' ? 'En Revisión' : 
-                           item.estado === 'Caso_de_Negocio' ? 'Caso de Negocio' : 
+                          {item.estado === 'Caso_de_Negocio' ? 'Caso de Negocio' : 
+                           item.estado === 'En_Proceso' ? 'En Proceso' : 
                            item.estado === 'En_Pausa' ? 'En Pausa' : 
-                           item.estado || 'Idea'}
+                           item.estado || 'Caso de Negocio'}
                         </span>
                       </td>
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
@@ -238,12 +237,11 @@ const ListaIniciativas = () => {
                           className="bg-[#0B0A0F] text-white border border-[#2D2845] rounded-md px-2 py-1 text-xs focus:outline-none focus:border-[#A855F7] cursor-pointer disabled:opacity-50"
                         >
                           <option value="Caso_de_Negocio">Caso de Negocio</option>
-                          <option value="En_Revision">En Revisión</option>
-                          <option value="En_Proceso">En Proceso</option>
                           <option value="Aprobado">Aprobado</option>
-                          <option value="Completado">Completado</option>
+                          <option value="En_Proceso">En Proceso</option>
                           <option value="En_Pausa">En Pausa</option>
-                          <option value="Rechazado">Rechazado</option>
+                          <option value="Completado">Completado</option>
+                          <option value="Cancelado">Cancelado</option>
                         </select>
                       </td>
                     </tr>
