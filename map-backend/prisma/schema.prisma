@@ -8,34 +8,34 @@ datasource db {
 }
 
 model Usuario {
-  id             Int                 @id @default(autoincrement())
-  nombre         String              @db.VarChar(100)
-  contrasena     String              @db.VarChar(255)
-  correo         String              @unique @db.VarChar(100)
-  fecha_creacion DateTime?           @default(now()) @db.Timestamp(6)
-  id_rol         Int?
-  asignaciones   AsignacionRecurso[]
-  logs_auditoria logs_auditoria[]
-  roles          roles?              @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  id               Int                  @id @default(autoincrement())
+  nombre           String               @db.VarChar(100)
+  contrasena       String               @db.VarChar(255)
+  correo           String               @unique @db.VarChar(100)
+  fecha_creacion   DateTime?            @default(now()) @db.Timestamp(6)
+  id_rol           Int?
+  asignaciones     AsignacionRecurso[]
+  logs_auditoria   logs_auditoria[]
+  roles            roles?               @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
 
   @@map("usuarios")
 }
 
 model Proyecto {
-  id                String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  codigo            String               @unique @db.VarChar(20)
-  nombre            String               @db.VarChar(150)
+  id                String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  codigo            String                 @unique @db.VarChar(20)
+  nombre            String                 @db.VarChar(150)
   descripcion       String?
-  estado            estado_proyecto_enum @default(Caso_de_Negocio)
-  departamento      String               @db.VarChar(100)
-  lider_proyecto    String               @db.VarChar(100)
-  presupuesto       Decimal              @default(0.00) @db.Decimal(12, 2)
-  costo_real        Decimal              @default(0.00) @db.Decimal(12, 2)
-  porcentaje_avance Int                  @default(0)
-  fecha_inicio      DateTime             @db.Date
-  fecha_fin         DateTime             @db.Date
-  creado_en         DateTime?            @default(now()) @db.Timestamptz(6)
-  actualizado_en    DateTime?            @default(now()) @db.Timestamptz(6)
+  estado            estado_proyecto_enum   @default(Caso_de_Negocio)
+  departamento      String                 @db.VarChar(100)
+  lider_proyecto    String                 @db.VarChar(100)
+  presupuesto       Decimal                @default(0.00) @db.Decimal(12, 2)
+  costo_real        Decimal                @default(0.00) @db.Decimal(12, 2)
+  porcentaje_avance Int                    @default(0)
+  fecha_inicio      DateTime               @db.Date
+  fecha_fin         DateTime               @db.Date
+  creado_en         DateTime?              @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime?              @default(now()) @db.Timestamptz(6)
 
   @@map("proyectos")
 }
@@ -115,13 +115,4 @@ enum frecuencia_medicion {
   Semanal
   Mensual
   Trimestral
-}
-
-enum estado_proyecto_enum {
-  Caso_de_Negocio
-  Aprobado
-  En_Proceso
-  En_Pausa
-  Completado
-  Cancelado
 }
