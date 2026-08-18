@@ -1,11 +1,13 @@
 // src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import Navbar from './components/Navbar'; // <--- Importamos tu nuevo Navbar fijo
+import Navbar from './components/Navbar'; 
 import Login from './views/Login'; 
 import Dashboard from './views/Dashboard'; 
 import DetalleProyecto from './views/DetalleProyecto'; 
 import ListaIniciativas from './views/ListaIniciativas';
+import VistaAdministracion from './views/VistaAdministracion';
+import RutaProtegidaAdmin from './components/RutaProtegidaAdmin'; // <--- 1. Importamos la ruta protegida
 
 // Componente auxiliar para manejar el Navbar fijo y el espacio superior
 const LayoutPrincipal = ({ children }) => {
@@ -39,6 +41,16 @@ function App() {
 
         {/* Ruta para detalle de proyecto */}
         <Route path="/proyectos/:id" element={<DetalleProyecto />} />
+
+        {/* Ruta para el Panel de Administración protegida por rol de Admin (1) */}
+        <Route 
+          path="/admin" 
+          element={
+            <RutaProtegidaAdmin>
+              <VistaAdministracion />
+            </RutaProtegidaAdmin>
+          } 
+        />
         
         {/* Redirección automática al Login si ingresan cualquier otra ruta */}
         <Route path="*" element={<Navigate to="/" replace />} />

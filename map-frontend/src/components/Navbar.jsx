@@ -1,7 +1,7 @@
 // src/components/Navbar.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, LogOut, Bell } from 'lucide-react';
+import { User, LogOut, Bell, Shield } from 'lucide-react';
 
 // Importa tu logo desde la carpeta assets
 import logoMapPmo from '../assets/logo-map-pmo.png';
@@ -19,7 +19,9 @@ const Navbar = () => {
   // Obtenemos los datos del usuario guardados en el login
   const usuarioLogueado = JSON.parse(localStorage.getItem('usuario')) || {};
   const nombreUsuario = usuarioLogueado.nombre || 'Usuario';
-
+  
+  // Validamos si el usuario actual es administrador (Rol 4)
+const esAdmin = usuarioLogueado.rol === 'ADMINISTRADOR';
   const handleCerrarSesion = () => {
     localStorage.removeItem('usuario');
     localStorage.removeItem('token');
@@ -65,6 +67,18 @@ const Navbar = () => {
 
         {/* ACCIONES DE USUARIO Y UTILIDADES */}
         <div className="flex items-center gap-3">
+
+          {/* ---> BOTÓN DE ADMINISTRACIÓN CONDICIONADO AL ROL <--- */}
+          {esAdmin && (
+            <button 
+              onClick={() => navigate('/admin')}
+              title="Panel de Administración"
+              className="p-2 text-gray-400 hover:text-white bg-[#0B0A0F]/80 border border-[#2D2845] hover:border-purple-500/30 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <Shield className="w-4 h-4 text-purple-400" />
+              <span className="hidden lg:inline text-xs font-medium text-purple-300">Admin</span>
+            </button>
+          )}
           
           {/* Campana de Notificaciones con Desplegable */}
           <div className="relative">

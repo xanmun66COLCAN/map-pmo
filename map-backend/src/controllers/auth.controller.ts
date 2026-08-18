@@ -47,9 +47,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const secretKey = process.env.JWT_SECRET || 'clave_secreta_por_defecto';
     const token = jwt.sign(
       { 
-        id_usuario: usuario.id, 
+        id: usuario.id,           // 👈 ID del usuario
         correo: usuario.correo, 
-        rol: rolNombre 
+        rol: Number(usuario.id_rol) // 👈 Guardamos el número de rol directamente aquí (1, 2, 3, etc.)
       },
       secretKey,
       { expiresIn: '8h' }

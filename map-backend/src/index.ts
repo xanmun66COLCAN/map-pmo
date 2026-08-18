@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import proyectoRoutes from './routes/proyecto.routes';
 import dashboardRoutes from './routes/dashboardRoutes';
+import adminRoutes from './routes/admin.routes'; // 👈 1. Importa las rutas de administración
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -15,22 +16,24 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// 🟢 1. Rutas de Autenticación (PÚBLICAS - Permiten iniciar sesión)
+// 🟢 1. Rutas de Autenticación (PÚBLICAS)
 app.use('/api/auth', authRoutes);
 
-// 🔒 2. Rutas de la API de Proyectos (PROTEGIDAS - Requieren Token)
-// app.use('/api', proyectoRoutes);
+// 🔒 2. Rutas de la API de Proyectos (PROTEGIDAS)
 app.use('/api/proyectos', proyectoRoutes);
 
+// 📊 3. Rutas del Dashboard
+app.use('/api/dashboard', dashboardRoutes);
+
+// 🛡️ 4. Rutas de Administración (PROTEGIDAS por rol ADMIN)
+app.use('/api/admin', adminRoutes); // 👈 2. Monta las rutas de admin aquí
 
 // Ruta de prueba inicial para verificar el estado del servidor
 app.get('/', (req: Request, res: Response) => {
   res.send('🚀 Servidor de MAP-PMO funcionando correctamente');
 });
 
-// Inicialización del servidor
+// Inicialización del servidor (DEBE IR SIEMPRE AL FINAL)
 app.listen(PORT, () => {
   console.log(`📡 Servidor corriendo en: http://localhost:${PORT}`);
 });
-
-app.use('/api/dashboard', dashboardRoutes);

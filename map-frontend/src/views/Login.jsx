@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosInstance';
@@ -10,15 +10,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-
-  // 🛡️ Redirección única y centralizada cuando el AuthContext confirma la sesión
-  useEffect(() => {
-    if (isAuthenticated) {
-      console.log("🔒 Sesión activa confirmada en AuthContext, redirigiendo a /dashboard...");
-      navigate('/dashboard', { replace: true });
-    }
-  }, [isAuthenticated, navigate]);
+  const { login } = useAuth(); // Ya no necesitamos isAuthenticated aquí para redirigir
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -44,13 +36,17 @@ export default function Login() {
       // Extraer el nombre del rol (ej: 'ADMINISTRADOR', 'LIDER_PMO')
       const rolEnTexto = usuarioAGuardar.rol || usuarioAGuardar.id_rol || 'SOLICITANTE';
 
-      // 1. Guardar en localStorage de forma sincrónica
+      // 1. Guardar de forma sincrónica en localStorage para que Axios lo lea de inmediato
       localStorage.setItem('token', tokenAGuardar);
       localStorage.setItem('usuario', JSON.stringify(usuarioAGuardar));
       localStorage.setItem('user_role', String(rolEnTexto));
 
-      // 2. Disparar el login en AuthContext
+      // 2. Actualizar el estado en el AuthContext
       login(tokenAGuardar, usuarioAGuardar);
+
+      // 3. Redirigir de forma segura al dashboard de manera inmediata
+      console.log("🔒 Credenciales guardadas, redirigiendo a /dashboard...");
+      navigate('/dashboard', { replace: true });
 
     } catch (err) {
       console.error('❌ Error en el flujo de autenticación:', err);

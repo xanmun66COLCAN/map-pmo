@@ -46,4 +46,35 @@ export const verificarToken = (
   }
 };
 
+// 3. Middleware para verificar roles permitidos
+export const verificarRol = (rolesPermuidos: number[]) => {
+  return (req: AuthRequest, res: Response, next: NextFunction): void => {
+    const usuario = req.usuario;
+
+    if (!usuario) {
+      res.status(401).json({
+        success: false,
+        message: 'No autorizado. Información de usuario no encontrada en la solicitud.',
+      });
+      return;
+    }
+
+    // Convertimos de forma segura a número
+    const rolUsuario = Number(usuario.rol);
+
+    console.log(`🔍 [AuthMiddleware] Rol del token:`, usuario.rol, '-> Convertido:', rolUsuario);
+    console.log(`🛡️ [AuthMiddleware] Roles permitidos por la ruta:`, rolesPermuidos);
+
+    if (isNaN(rolUsuario) || !rolesPermuidos.includes(rolUsuario)) {
+      res.status(403).json({
+        success: false,
+        message: 'Acceso prohibido. No cuentas con los privilegios requeridos para realizar esta acción.',
+      });
+      return;
+    }
+
+    next();
+  };
+};
+
 export default verificarToken;
