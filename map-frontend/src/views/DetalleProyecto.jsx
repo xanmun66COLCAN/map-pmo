@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Edit3, Save, X, Code, Calendar, DollarSign, User, Briefcase, TrendingUp } from "lucide-react";
 import api from "../api/axiosInstance.js";
+import SeccionKpis from "../components/SeccionKpis.jsx"; // 👈 1. Importamos el componente de KPIs
 
 const DetalleProyecto = () => {
     const { id } = useParams();
@@ -37,7 +38,6 @@ const DetalleProyecto = () => {
                 console.log(`📡 Consultando detalle del proyecto ID: ${id}`);
                 const response = await api.get(`/proyectos/${id}`);
                 
-                // Extracción compatible con { success: true, data: { ... } } o objeto directo
                 const responseData = response.data;
                 const datosProyecto = responseData?.data || responseData;
                 
@@ -134,7 +134,6 @@ const DetalleProyecto = () => {
                             <Code size={14} /> {showDebug ? "Ocultar JSON" : "Ver JSON"}
                         </button>
 
-                        {/* Botón de Actualizar / Modificar Información */}
                         {esAdminOLider ? (
                             isEditing ? (
                                 <div className="flex items-center gap-2">
@@ -389,6 +388,9 @@ const DetalleProyecto = () => {
                         )}
                     </div>
                 </div>
+
+                {/* 📊 SECCIÓN DE KPIs / INDICADORES CLAVE */}
+                <SeccionKpis proyectoId={id} />
             </div>
         </div>
     );

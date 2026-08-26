@@ -10,6 +10,12 @@ const iniciativaRoutes = require('./routes/iniciativaRoutes');
 const proyectoRoutes = require('./routes/proyectoRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes'); // 👈 1. Nueva ruta agregada
 
+// Importa tus rutas de KPIs (ajusta la ruta del archivo según tu estructura)
+const kpiRoutes = require('./routes/kpi.routes'); // o './routes/kpis'
+
+// Regístrala en Express con el prefijo '/api/kpis'
+app.use('/api/kpis', kpiRoutes);
+
 const app = express();
 
 // CONFIGURACIÓN DE CORS: Modificada para darle acceso seguro a tu Frontend de Vite

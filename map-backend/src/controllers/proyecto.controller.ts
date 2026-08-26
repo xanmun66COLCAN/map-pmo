@@ -159,15 +159,41 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
 export const updateProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   try {
-    const { fecha_inicio, fecha_fin, presupuesto, porcentaje_avance, costo_real, ...rest } = req.body;
+    const { 
+      id: _id, 
+      codigo: _codigo, 
+      creado_en: _creado_en, 
+      actualizado_en: _actualizado_en, 
+      solicitante, 
+      fecha_inicio, 
+      fecha_fin, 
+      presupuesto, 
+      porcentaje_avance, 
+      costo_real, 
+      ...rest 
+    } = req.body;
 
-    // Normalizar tipos numéricos y fechas si vienen en el body de actualización
+    // Construir objeto de datos limpios para evitar inyectar campos no válidos
     const dataToUpdate: any = { ...rest };
-    if (fecha_inicio) dataToUpdate.fecha_inicio = new Date(fecha_inicio);
-    if (fecha_fin) dataToUpdate.fecha_fin = new Date(fecha_fin);
-    if (presupuesto !== undefined) dataToUpdate.presupuesto = Number(presupuesto);
-    if (porcentaje_avance !== undefined) dataToUpdate.porcentaje_avance = Number(porcentaje_avance);
-    if (costo_real !== undefined) dataToUpdate.costo_real = Number(costo_real);
+
+    // Validar y parsear fechas solo si vienen con contenido real
+    if (fecha_inicio && fecha_inicio.trim() !== '') {
+      dataToUpdate.fecha_inicio = new Date(fecha_inicio);
+    }
+    if (fecha_fin && fecha_fin.trim() !== '') {
+      dataToUpdate.fecha_fin = new Date(fecha_fin);
+    }
+
+    // Normalizar valores numéricos de forma estricta
+    if (presupuesto !== undefined && presupuesto !== '') {
+      dataToUpdate.presupuesto = Number(presupuesto);
+    }
+    if (porcentaje_avance !== undefined && porcentaje_avance !== '') {
+      dataToUpdate.porcentaje_avance = parseInt(porcentaje_avance, 10); // 👈 Asegura que sea entero para la BD
+    }
+    if (costo_real !== undefined && costo_real !== '') {
+      dataToUpdate.costo_real = Number(costo_real);
+    } 
 
     const proyectoActualizado = await prisma.proyecto.update({
       where: { id },
@@ -176,7 +202,8 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
 
     res.status(200).json({ success: true, data: proyectoActualizado });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error('❌ Error detallado al actualizar proyecto en Prisma:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar el proyecto.', error: error.message });
   }
 };
 
