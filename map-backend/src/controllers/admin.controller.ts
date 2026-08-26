@@ -2,6 +2,7 @@ import { Response } from 'express';
 import bcrypt from 'bcrypt';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import pool from '../db';
+import { registrarAuditoria } from '../helpers/auditoria.helper'; // 👈 Importamos el helper de auditoría
 
 // 📋 1. Listar todos los usuarios con su rol
 export const obtenerUsuarios = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -58,11 +59,19 @@ export const crearUsuarioAdmin = async (req: AuthRequest, res: Response): Promis
       RETURNING id, nombre, correo, id_rol;
     `;
     const result = await pool.query(query, [nombre, correo, contrasenaHash, Number(id_rol)]);
+    const nuevoUsuario = result.rows[0];
+
+    // 📝 Registrar la creación en la auditoría
+    await registrarAuditoria(
+      Number(req.usuario?.id), 
+      'CREAR_USUARIO', 
+      `Se creó el usuario ${correo} con rol ID ${id_rol}.`
+    );
 
     res.status(201).json({
       success: true,
       message: '¡Usuario creado exitosamente!',
-      usuario: result.rows[0],
+      usuario: nuevoUsuario,
     });
   } catch (error: any) {
     console.error('❌ Error al crear usuario:', error);
@@ -89,15 +98,24 @@ export const actualizarRolUsuario = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
+    const usuarioModificado = result.rows[0];
+
     // Obtener nombre del rol actualizado para la respuesta
     const rolQuery = await pool.query('SELECT nombre_rol FROM roles WHERE id = $1', [Number(id_rol)]);
     const nombre_rol = rolQuery.rows[0]?.nombre_rol || 'SIN_ROL';
+
+    // 📝 Registrar el cambio de rol en la auditoría
+    await registrarAuditoria(
+      Number(req.usuario?.id), 
+      'CAMBIO_ROL', 
+      `Se modificó el rol del usuario ${usuarioModificado.correo} al rol ID ${id_rol} (${nombre_rol}).`
+    );
 
     res.status(200).json({
       success: true,
       message: 'Rol actualizado exitosamente',
       usuario: {
-        ...result.rows[0],
+        ...usuarioModificado,
         rol: { nombre_rol }
       },
     });
@@ -107,12 +125,20 @@ export const actualizarRolUsuario = async (req: AuthRequest, res: Response): Pro
   }
 };
 
-// 📊 4. Obtener registros de auditoría
+// 📊 4. Obtener registros de auditoría reales
 export const obtenerAuditoria = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    res.status(200).json([]);
-  } catch (error) {
-    console.error('Error al obtener auditoría:', error);
-    res.status(200).json([]);
+    const query = `
+      SELECT a.id, a.accion, a.detalles, a.fecha_transaccion, u.correo as usuario_correo
+      FROM auditoria a
+      LEFT JOIN usuarios u ON a.id_usuario = u.id
+      ORDER BY a.fecha_transaccion DESC
+      LIMIT 100;
+    `;
+    const result = await pool.query(query);
+    res.status(200).json(result.rows);
+  } catch (error: any) {
+    console.error('❌ Error al obtener auditoría:', error);
+    res.status(500).json({ success: false, message: 'Error interno al obtener auditoría', error: error.message });
   }
 };

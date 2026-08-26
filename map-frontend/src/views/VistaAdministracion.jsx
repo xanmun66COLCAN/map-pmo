@@ -356,26 +356,41 @@ const VistaAdministracion = () => {
                 <thead className="bg-[#0B0A0F] text-gray-400 uppercase text-[10px] tracking-wider border-b border-[#2D2845]">
                   <tr>
                     <th className="py-3 px-4">ID Log</th>
-                    <th className="py-3 px-4">Acción / Descripción</th>
-                    <th className="py-3 px-4">Usuario ID</th>
+                    <th className="py-3 px-4">Acción</th>
+                    <th className="py-3 px-4">Detalles</th>
+                    <th className="py-3 px-4">Responsable</th>
                     <th className="py-3 px-4">Fecha y Hora</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#2D2845]/50 text-gray-300">
                   {logs.length > 0 ? (
                     logs.map((log) => (
-                      <tr key={log.id_log || log.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
-                        <td className="py-3 px-4 font-mono text-purple-400">#{log.id_log || log.id}</td>
-                        <td className="py-3 px-4">{log.accion || log.descripcion || 'Sin descripción'}</td>
-                        <td className="py-3 px-4">{log.id_usuario || 'N/A'}</td>
+                      <tr key={log.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
+                        <td className="py-3 px-4 font-mono text-purple-400">#{log.id}</td>
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            log.accion === 'LOGIN_EXITOSO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                            log.accion === 'CAMBIO_ROL' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                            log.accion === 'CREAR_USUARIO' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          }`}>
+                            {log.accion}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-gray-300 max-w-xs truncate" title={log.detalles}>
+                          {log.detalles || 'Sin detalles'}
+                        </td>
+                        <td className="py-3 px-4 text-emerald-400 font-medium">
+                          {log.usuario_correo || 'Sistema / Desconocido'}
+                        </td>
                         <td className="py-3 px-4 font-mono text-gray-400">
-                          {new Date(log.fecha_transaccion || log.createdAt).toLocaleString()}
+                          {new Date(log.fecha_transaccion).toLocaleString()}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="4" className="text-center py-8 text-gray-400">
+                      <td colSpan="5" className="text-center py-8 text-gray-400">
                         No hay registros de auditoría almacenados.
                       </td>
                     </tr>

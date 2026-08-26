@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import pool from '../db';
+import { registrarAuditoria } from '../helpers/auditoria.helper'; // 👈 Importamos el helper de auditoría
 
 // Diccionario para convertir el número a string
 const MAPA_ROLES: Record<number, string> = {
@@ -26,6 +27,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const result = await pool.query(query, [correo]);
 
     if (result.rows.length === 0) {
+      // Opcional: Registrar intento fallido con correo desconocido
+      await registrarAuditoria(null, 'LOGIN_FALLIDO', `Intento de acceso con correo inexistente: ${correo}`);
+      
       res.status(401).json({ message: 'Credenciales incorrectas (Usuario no encontrado)' });
       return;
     }
@@ -36,6 +40,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const contrasenaValida = await bcrypt.compare(contrasena, usuario.contrasena);
 
     if (!contrasenaValida) {
+      // Registrar intento fallido por contraseña errónea
+      await registrarAuditoria(usuario.id, 'LOGIN_FALLIDO', `Contraseña incorrecta para el usuario ${usuario.correo}`);
+
       res.status(401).json({ message: 'Credenciales incorrectas (Contraseña inválida)' });
       return;
     }
@@ -55,7 +62,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       { expiresIn: '8h' }
     );
 
-    // 6. Respuesta limpia al frontend
+    // 6. Registrar login exitoso en la tabla de auditoría
+    await registrarAuditoria(
+      usuario.id, 
+      'LOGIN_EXITOSO', 
+      `El usuario ${usuario.correo} inició sesión exitosamente en el sistema.`
+    );
+
+    // 7. Respuesta limpia al frontend
     res.status(200).json({
       message: '¡Inicio de sesión exitoso!',
       token,
