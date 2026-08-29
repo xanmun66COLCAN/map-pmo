@@ -468,7 +468,6 @@ const Dashboard = () => {
 
                   <div className="flex items-center gap-2">
                     <select
-                      id="ordenar-dash"
                       value={criterioOrden}
                       onChange={(e) => setCriterioOrden(e.target.value)}
                       className="bg-[#0B0A0F] border border-[#2D2845] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-[#A855F7]"
@@ -507,7 +506,7 @@ const Dashboard = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {ordenarProyectos(proyectosFiltrados).map((proyecto) => (
+                  {ordenarProyectos(proyectosFiltrados).slice(0, 4).map((proyecto) => (
                     <div 
                       key={proyecto.id || proyecto.id_iniciativa} 
                       onClick={() => navigate(`/proyectos/${proyecto.id || proyecto.id_iniciativa}`)}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import api from '../api/axiosInstance'; // Asegúrate de ajustar la ruta relativa a tu archivo axiosInstance/api.js
 
 const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
   const ESTADO_INICIAL = 'Caso_de_Negocio';
@@ -40,7 +41,6 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       const codigoProyecto = formData.codigo.trim() || `MAP-${Date.now().toString().slice(-4)}`;
 
       const isoFechaInicio = new Date(`${formData.fecha_inicio}T00:00:00.000Z`).toISOString();
@@ -60,26 +60,34 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
         presupuesto: formData.presupuesto ? parseFloat(formData.presupuesto) : 0
       };
 
-      const response = await fetch('http://localhost:5000/api/proyectos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
+      // Solución: Petición enviada mediante la instancia cliente 'api' en lugar de fetch nativo
+      const response = await api.post('/proyectos', payload);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || data.error || 'Error al guardar el proyecto.');
       }
 
-      onProyectoCreado(data.data || data);
+      // Extracción de variables devueltas por el servidor
+      const proyectoCreado = data.data || data;
+      const nombreProyecto = proyectoCreado.nombre || payload.nombre;
+      const codigoGenerado = proyectoCreado.codigo || payload.codigo;
+      const registrador = data.usuarioRegistrador || proyectoCreado.registrador || 'Administrador';
+
+      // Alerta de confirmación
+      alert(
+        `✅ ¡Iniciativa creada exitosamente!\n\n` +
+        `• Nombre: ${nombreProyecto}\n` +
+        `• Código: ${codigoGenerado}\n` +
+        `• Registrado por: ${registrador}`
+      );
+
+      onProyectoCreado(proyectoCreado);
       onClose();
 
     } catch (err) {
-      setError(err.message);
+      const mensajeError = err.response?.data?.message || err.response?.data?.error || err.message;
+      setError(mensajeError);
     } finally {
       setLoading(false);
     }

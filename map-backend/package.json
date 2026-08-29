@@ -24,9 +24,15 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "devDependencies": {
+    "@prisma/client": "^5.10.2",
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
-    "@types/pg": "^8.20.0"
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/pg": "^8.20.0",
+    "nodemon": "^3.1.0",
+    "prisma": "^5.10.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.2.2"
   }
 }

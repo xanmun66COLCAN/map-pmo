@@ -127,6 +127,9 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
 
 // CREATE
 export const crearProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
+  // Capturar el ID de forma limpia y directa desde el token validado
+  const idUsuarioAccion = req.usuario?.id ? Number(req.usuario.id) : null;
+
   try {
     const { codigo, nombre, descripcion, fecha_inicio, fecha_fin, presupuesto, departamento, lider_proyecto, estado } = req.body;
 
@@ -135,21 +138,63 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
-    const nuevoProyecto = await prisma.proyecto.create({
-      data: {
-        codigo,
-        nombre,
-        descripcion: descripcion || '',
-        fecha_inicio: fecha_inicio ? new Date(fecha_inicio) : new Date(),
-        ...(fecha_fin && { fecha_fin: new Date(fecha_fin) }),
-        presupuesto: presupuesto !== undefined ? Number(presupuesto) : 0,
-        departamento: departamento || '',
-        lider_proyecto: lider_proyecto || '',
-        estado: estado || 'Caso_de_Negocio',
-      },
+    const nuevoProyecto = await prisma.$transaction(async (tx) => {
+      const proyecto = await tx.proyecto.create({
+        data: {
+          codigo,
+          nombre,
+          descripcion: descripcion || '',
+          fecha_inicio: fecha_inicio ? new Date(fecha_inicio) : new Date(),
+          ...(fecha_fin && { fecha_fin: new Date(fecha_fin) }),
+          presupuesto: presupuesto !== undefined ? Number(presupuesto) : 0,
+          departamento: departamento || '',
+          lider_proyecto: lider_proyecto || '',
+          estado: estado || 'Caso_de_Negocio',
+        },
+      });
+
+      await tx.kpi.createMany({
+        data: [
+          {
+            proyecto_id: proyecto.id,
+            nombre_kpi: 'Ejecución de Presupuesto',
+            frecuencia: 'Mensual',
+            descripcion: 'Control del presupuesto asignado frente al ejecutado en la iniciativa.',
+            meta_valor: 100,
+            valor_actual: 0
+          },
+          {
+            proyecto_id: proyecto.id,
+            nombre_kpi: 'Cumplimiento de Entregables',
+            frecuencia: 'Mensual',
+            descripcion: 'Porcentaje de productos o fases completadas según el cronograma.',
+            meta_valor: 100,
+            valor_actual: 0
+          }
+        ]
+      });
+
+      await tx.logs_auditoria.create({
+        data: {
+          id_usuario_accion: idUsuarioAccion, // Forzado directamente
+          id_proyecto: proyecto.id,
+          campo_modificado: 'creacion_proyecto',
+          valor_anterior: null,
+          valor_nuevo: `Creación de iniciativa: ${nombre} (${codigo})`,
+          fecha_transaccion: new Date()
+        }
+      });
+
+      return proyecto;
     });
 
-    res.status(201).json({ success: true, data: nuevoProyecto });
+    // Retornamos el éxito con los datos para que el front los muestre
+    res.status(201).json({ 
+      success: true, 
+      message: '¡Iniciativa creada exitosamente!',
+      data: nuevoProyecto,
+      usuarioRegistrador: req.usuario?.correo || 'Usuario del Sistema'
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -251,10 +296,10 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
     try {
       await prisma.logs_auditoria.create({
         data: {
-          id_usuario_accion: req.usuario?.id || null,
+          id_usuario_accion: req.usuario?.id || req.usuario?.userId || req.usuario?.sub || null,
           id_proyecto: id,
           campo_modificado: 'estado',
-          valor_anterior: estadoAnterior, // Asegúrate de tener esta variable con el estado previo
+          valor_anterior: estadoAnterior,
           valor_nuevo: nuevoEstado,
           fecha_transaccion: new Date()
         }
