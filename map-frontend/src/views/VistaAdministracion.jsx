@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, ShieldCheck, FileText, Users, AlertCircle, CheckCircle2 } from 'lucide-react';
-import api from '../api/axiosInstance'; // 👈 Usamos tu instancia centralizada con interceptores
+import api from '../api/axiosInstance'; // 👈 Instancia centralizada con interceptores
 
 const VistaAdministracion = () => {
   // Estados para la pestaña activa ('usuarios', 'gestion', 'auditoria')
@@ -11,7 +11,7 @@ const VistaAdministracion = () => {
     nombre: '',
     correo: '',
     contrasena: '',
-    id_rol: '2' // Por defecto Rol 2 (ej. Líder de Proyecto)
+    id_rol: '2' // Por defecto Rol 2 (Líder de Proyecto)
   });
   const [mensajeUsuario, setMensajeUsuario] = useState(null);
   const [errorUsuario, setErrorUsuario] = useState(null);
@@ -63,13 +63,18 @@ const VistaAdministracion = () => {
     }
   };
 
-  // 📊 Obtener logs de auditoría
+  // 📊 Obtener logs de auditoría corrigiendo la extracción del array
   const obtenerLogsAuditoria = async () => {
     setLoadingLogs(true);
     setErrorLogs(null);
     try {
-      const response = await api.get('/admin/auditoria');
-      setLogs(response.data);
+      const response = await api.get(`/proyectos/auditoria/logs?_t=${new Date().getTime()}`);
+      
+      console.log("📦 RESPUESTA CRUDA DE AUDITORÍA:", response.data);
+
+      // 👇 Extraemos correctamente el array desde response.data.data
+      const datosLogs = response.data.data || response.data.logs || response.data;
+      setLogs(Array.isArray(datosLogs) ? datosLogs : []);
     } catch (err) {
       setErrorLogs(err.response?.data?.message || 'Error al obtener los registros de auditoría.');
     } finally {
@@ -85,7 +90,7 @@ const VistaAdministracion = () => {
     setErrorUsuario(null);
 
     try {
-      const response = await api.post('/admin/usuarios', formData);
+      await api.post('/admin/usuarios', formData);
       setMensajeUsuario('¡Usuario creado exitosamente con contraseña cifrada!');
       setFormData({ nombre: '', correo: '', contrasena: '', id_rol: '2' });
     } catch (err) {
@@ -285,22 +290,21 @@ const VistaAdministracion = () => {
                 </thead>
                 <tbody className="divide-y divide-[#2D2845]/50 text-gray-300">
                   {listaUsuarios.length > 0 ? (
-                    listaUsuarios.map((usr) => (
-                      <tr key={usr.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
-                        {/* 👈 Corregido usr.id_usuario por usr.id */}
-                        <td className="py-3 px-4 font-mono text-purple-400">#{usr.id}</td>
-                        <td className="py-3 px-4 font-medium text-white">{usr.nombre}</td>
-                        <td className="py-3 px-4 text-gray-400">{usr.correo}</td>
+                    listaUsuarios.map((u) => (
+                      <tr key={u.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
+                        <td className="py-3 px-4 font-mono text-purple-400">#{u.id}</td>
+                        <td className="py-3 px-4 font-medium text-white">{u.nombre}</td>
+                        <td className="py-3 px-4 text-gray-300">{u.correo}</td>
                         <td className="py-3 px-4">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/20">
-                            {usr.rol?.nombre_rol || `Rol ID: ${usr.id_rol}`}
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/25">
+                            {u.rol?.nombre || `Rol ID: ${u.id_rol}`}
                           </span>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <select
-                            value={usr.id_rol}
-                            onChange={(e) => handleCambiarRol(usr.id, e.target.value)}
-                            className="bg-[#0B0A0F] border border-[#2D2845] text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500 transition-all cursor-pointer"
+                            defaultValue={u.id_rol}
+                            onChange={(e) => handleCambiarRol(u.id, e.target.value)}
+                            className="bg-[#0B0A0F] border border-[#2D2845] rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500"
                           >
                             <option value="1">1 - Administrador</option>
                             <option value="2">2 - Líder de Proyecto</option>
@@ -313,7 +317,7 @@ const VistaAdministracion = () => {
                   ) : (
                     <tr>
                       <td colSpan="5" className="text-center py-8 text-gray-400">
-                        No hay usuarios registrados en el sistema.
+                        No hay usuarios registrados.
                       </td>
                     </tr>
                   )}
@@ -330,7 +334,7 @@ const VistaAdministracion = () => {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-sm font-bold uppercase tracking-wider text-white">Registros de Auditoría</h2>
-              <p className="text-xs text-gray-400">Historial reciente de transacciones y eventos de cumplimiento.</p>
+              <p className="text-xs text-gray-400">Historial reciente de transacciones, inicios de sesión y cambios de estado.</p>
             </div>
             <button
               onClick={obtenerLogsAuditoria}
@@ -356,38 +360,62 @@ const VistaAdministracion = () => {
                 <thead className="bg-[#0B0A0F] text-gray-400 uppercase text-[10px] tracking-wider border-b border-[#2D2845]">
                   <tr>
                     <th className="py-3 px-4">ID Log</th>
-                    <th className="py-3 px-4">Acción</th>
-                    <th className="py-3 px-4">Detalles</th>
+                    <th className="py-3 px-4">Acción / Tipo</th>
+                    <th className="py-3 px-4">Detalle del Cambio</th>
                     <th className="py-3 px-4">Responsable</th>
                     <th className="py-3 px-4">Fecha y Hora</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#2D2845]/50 text-gray-300">
                   {logs.length > 0 ? (
-                    logs.map((log) => (
-                      <tr key={log.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
-                        <td className="py-3 px-4 font-mono text-purple-400">#{log.id}</td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                            log.accion === 'LOGIN_EXITOSO' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                            log.accion === 'CAMBIO_ROL' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                            log.accion === 'CREAR_USUARIO' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                            'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                          }`}>
-                            {log.accion}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-gray-300 max-w-xs truncate" title={log.detalles}>
-                          {log.detalles || 'Sin detalles'}
-                        </td>
-                        <td className="py-3 px-4 text-emerald-400 font-medium">
-                          {log.usuario_correo || 'Sistema / Desconocido'}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-gray-400">
-                          {new Date(log.fecha_transaccion).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))
+                    logs.map((log) => {
+                      const esLogin = log.campo_modificado === 'LOGIN_EXITOSO' || log.campo_modificado === 'LOGIN_FALLIDO';
+                      const esRol = log.campo_modificado === 'CAMBIO_ROL';
+                      const esProyecto = Boolean(log.id_proyecto);
+
+                      return (
+                        <tr key={log.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
+                          <td className="py-3 px-4 font-mono text-purple-400">#{log.id}</td>
+                          
+                          {/* Badge del tipo de evento */}
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                              esLogin ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                              esRol ? 'bg-purple-500/10 text-purple-400 border border-purple-500/25' :
+                              'bg-amber-500/10 text-amber-400 border border-amber-500/25'
+                            }`}>
+                              {log.campo_modificado}
+                            </span>
+                          </td>
+
+                          {/* Detalles / Cambio de Valores */}
+                          <td className="py-3 px-4 text-gray-300">
+                            {esProyecto ? (
+                              <>
+                                <span className="text-rose-400 font-mono">{log.valor_anterior || 'N/A'}</span>
+                                <span className="text-gray-500 mx-2">➔</span>
+                                <span className="text-emerald-400 font-mono">{log.valor_nuevo || 'N/A'}</span>
+                                <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                                  Proyecto modificado exitosamente (Ref: {log.id_proyecto.substring(0, 8)}...)
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-gray-200">{log.valor_nuevo || 'Sin detalles'}</span>
+                            )}
+                          </td>
+
+                          {/* Responsable */}
+                          <td className="py-3 px-4 text-purple-300 font-medium">
+                            {log.usuarios?.correo || `Usuario ID: ${log.id_usuario_accion || 'Sistema'}`}
+                          </td>
+
+                          {/* Fecha y Hora */}
+                          <td className="py-3 px-4 font-mono text-gray-400">
+                            {log.fecha_transaccion ? new Date(log.fecha_transaccion).toLocaleString() : 'N/A'}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
                       <td colSpan="5" className="text-center py-8 text-gray-400">

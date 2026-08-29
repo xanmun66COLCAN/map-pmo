@@ -173,10 +173,8 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       ...rest 
     } = req.body;
 
-    // Construir objeto de datos limpios para evitar inyectar campos no válidos
     const dataToUpdate: any = { ...rest };
 
-    // Validar y parsear fechas solo si vienen con contenido real
     if (fecha_inicio && fecha_inicio.trim() !== '') {
       dataToUpdate.fecha_inicio = new Date(fecha_inicio);
     }
@@ -184,12 +182,11 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       dataToUpdate.fecha_fin = new Date(fecha_fin);
     }
 
-    // Normalizar valores numéricos de forma estricta
     if (presupuesto !== undefined && presupuesto !== '') {
       dataToUpdate.presupuesto = Number(presupuesto);
     }
     if (porcentaje_avance !== undefined && porcentaje_avance !== '') {
-      dataToUpdate.porcentaje_avance = parseInt(porcentaje_avance, 10); // 👈 Asegura que sea entero para la BD
+      dataToUpdate.porcentaje_avance = parseInt(porcentaje_avance, 10);
     }
     if (costo_real !== undefined && costo_real !== '') {
       dataToUpdate.costo_real = Number(costo_real);
@@ -220,31 +217,52 @@ export const deleteProyecto = async (req: AuthRequest, res: Response): Promise<v
 
 // ACTUALIZAR ESTADO DE INICIATIVA / PROYECTO
 export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response): Promise<void> => {
+  console.log("🔥 RUTA ALCANZADA: /proyectos/:id/estado (o similar)");
+  console.log("📦 Body recibido:", req.body);
+  console.log("🆔 Params recibidos:", req.params);
+  const id = String(req.params.id);
+  const nuevoEstado = req.body.nuevoEstado || req.body.estado;
+
+  console.log("🟢 [DEBUG] Intentando cambiar estado de iniciativa");
+  console.log("🟢 ID Proyecto:", id);
+  console.log("🟢 Nuevo estado recibido:", nuevoEstado);
+  console.log("🟢 Usuario en request:", req.usuario);
+
   try {
-    const id = String(req.params.id);
-    const { nuevoEstado } = req.body;
-    const usuarioRol = (req.usuario?.rol || '').toLowerCase().trim();
-
-    // Roles permitidos ampliados para incluir gestores o administradores
-    const rolesPermitidos = ['admin', 'pmo_manager', 'director', 'administrador', 'lider_pmo', 'gestor'];
-    
-    if (!usuarioRol || !rolesPermitidos.includes(usuarioRol)) {
-      res.status(403).json({ 
-        success: false, 
-        message: `Acceso denegado. El rol "${usuarioRol || 'desconocido'}" no cuenta con los privilegios necesarios.` 
-      });
-      return;
-    }
-
     if (!nuevoEstado) {
       res.status(400).json({ success: false, message: 'El nuevo estado es obligatorio.' });
       return;
     }
 
+    const proyectoExistente = await prisma.proyecto.findUnique({ where: { id } });
+    if (!proyectoExistente) {
+      res.status(404).json({ success: false, message: 'El proyecto no existe en la base de datos.' });
+      return;
+    }
+
+    const estadoAnterior = proyectoExistente.estado;
+
     const proyectoActualizado = await prisma.proyecto.update({
       where: { id },
       data: { estado: nuevoEstado }
     });
+
+    // 📝 Registrar el cambio usando exactamente las columnas que la tabla posee
+    try {
+      await prisma.logs_auditoria.create({
+        data: {
+          id_usuario_accion: req.usuario?.id || null,
+          id_proyecto: id,
+          campo_modificado: 'estado',
+          valor_anterior: estadoAnterior, // Asegúrate de tener esta variable con el estado previo
+          valor_nuevo: nuevoEstado,
+          fecha_transaccion: new Date()
+        }
+      });
+      console.log('✅ Cambio de estado registrado en auditoría correctamente');
+    } catch (auditError) {
+      console.error('❌ ERROR AL GUARDAR AUDITORÍA:', auditError);
+    }
 
     res.status(200).json({
       success: true,
@@ -252,6 +270,33 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
       data: proyectoActualizado
     });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    console.error("❌ ERROR CRÍTICO EN actualizarestadoIniciativa:", error);
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        success: false, 
+        message: 'Error interno al actualizar estado', 
+        error: error.message || error 
+      });
+    }
+  }
+};
+
+// OBTENER LOGS DE AUDITORÍA UNIFICADOS
+export const getLogsAuditoria = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const logs = await prisma.logs_auditoria.findMany({
+      include: {
+        usuarios: { select: { correo: true } }
+      },
+      orderBy: { fecha_transaccion: 'desc' }
+    });
+
+    res.json({
+      success: true,
+      data: logs
+    });
+  } catch (error) {
+    console.error("Error al obtener auditoría:", error);
+    res.status(500).json({ success: false, message: 'Error al obtener los registros de auditoría.' });
   }
 };
