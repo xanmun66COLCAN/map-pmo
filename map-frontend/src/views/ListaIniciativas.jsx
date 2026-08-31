@@ -13,7 +13,7 @@ const ListaIniciativas = () => {
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstado, setFiltroEstado] = useState('TODOS');
   
-  // Estados para el ordenamiento dinámico por columnas
+  // Estados para el ordenamiento dinámico por columnas (por defecto ordenamos por fecha)
   const [columnaOrden, setColumnaOrden] = useState('fecha');
   const [direccion, setDireccion] = useState('desc');
 
@@ -23,7 +23,6 @@ const ListaIniciativas = () => {
   const usuarioLogueado = JSON.parse(localStorage.getItem('usuario')) || {};
   
   // Definimos qué roles tienen privilegios para cambiar estados o ver acciones avanzadas
-  // Administrador y Líder de PMO tienen acceso total; Analista y Revisor/Sponsor tienen menos privilegios.
   const tienePrivilegiosAltos = ['ADMINISTRADOR', 'LIDER_PMO'].includes(usuarioLogueado.rol);
 
   const cargarIniciativas = useCallback(async () => {
@@ -176,6 +175,14 @@ const ListaIniciativas = () => {
                   </div>
                 </th>
                 <th className="p-4">Descripción</th>
+                {/* Nueva columna Calificación */}
+                <th className="p-4 cursor-pointer hover:text-white transition-colors" onClick={() => toggleOrden('puntaje')}>
+                  <div className="flex items-center gap-1.5">
+                    Calificación 
+                    <ArrowUpDown className={`w-3 h-3 ${columnaOrden === 'puntaje' ? 'text-[#A855F7]' : 'text-gray-500'}`} />
+                    {columnaOrden === 'puntaje' && (direccion === 'asc' ? '▲' : '▼')}
+                  </div>
+                </th>
                 <th className="p-4 cursor-pointer hover:text-white transition-colors" onClick={() => toggleOrden('fecha')}>
                   <div className="flex items-center gap-1.5">
                     Fecha Inicio 
@@ -190,7 +197,6 @@ const ListaIniciativas = () => {
                     {columnaOrden === 'estado' && (direccion === 'asc' ? '▲' : '▼')}
                   </div>
                 </th>
-                {/* Ocultamos o adaptamos la columna de acciones si no tiene privilegios */}
                 <th className="p-4 text-right">Acciones</th>
               </tr>
             </thead>
@@ -202,6 +208,7 @@ const ListaIniciativas = () => {
                   const areaDepto = item.area || item.departamento || item.depto || item.solicitante?.area || item.solicitante?.departamento || item.solicitante?.nombre || 'N/A';
                   const descripcion = item.descripcion || item.description || 'Sin descripción';
                   const fecha = item.fecha_inicio || item.fecha_creacion || item.createdAt || item.fecha;
+                  const puntajeGlobal = item.puntaje_global !== undefined && item.puntaje_global !== null ? Number(item.puntaje_global) : null;
 
                   return (
                     <tr 
@@ -217,6 +224,17 @@ const ListaIniciativas = () => {
                       </td>
                       <td className="p-4 text-gray-400 max-w-xs truncate text-xs">
                         {descripcion}
+                      </td>
+                      {/* Celda de Calificación Global */}
+                      <td className="p-4 text-xs">
+                        <span className={`px-2.5 py-1 rounded-lg border font-bold inline-flex items-center gap-1 shadow-sm ${
+                          puntajeGlobal !== null 
+                            ? 'bg-[#1e1b2e] border-[#A855F7]/40 text-[#A855F7]' 
+                            : 'bg-gray-800/50 border-gray-700/50 text-gray-400 font-normal'
+                        }`}>
+                          <span>★</span>
+                          <span>{puntajeGlobal !== null ? `${puntajeGlobal.toFixed(1)} / 10` : 'Sin calificar'}</span>
+                        </span>
                       </td>
                       <td className="p-4 text-gray-400 text-xs">
                         {fecha ? new Date(fecha).toLocaleDateString() : 'N/A'}
@@ -238,7 +256,6 @@ const ListaIniciativas = () => {
                       </td>
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                         {tienePrivilegiosAltos ? (
-                          /* Selector habilitado solo para Administrador y Líder de PMO */
                           <select
                             disabled={procesandoId === itemId}
                             value={item.estado || 'Caso_de_Negocio'}
@@ -252,17 +269,14 @@ const ListaIniciativas = () => {
                             <option value="Completado">Completado</option>
                             <option value="Cancelado">Cancelado</option>
                           </select>
-                        ) : (
-                          /* Si no tiene privilegios, no se renderiza nada en la columna de acciones */
-                          null
-                        )}
+                        ) : null}
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-gray-500 text-xs">
+                  <td colSpan="7" className="p-8 text-center text-gray-500 text-xs">
                     No se encontraron iniciativas registradas o que coincidan con la búsqueda.
                   </td>
                 </tr>

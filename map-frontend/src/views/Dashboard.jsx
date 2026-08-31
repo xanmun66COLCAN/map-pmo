@@ -512,7 +512,13 @@ const Dashboard = () => {
                       onClick={() => navigate(`/proyectos/${proyecto.id || proyecto.id_iniciativa}`)}
                       className="cursor-pointer relative bg-[#13111C] border border-[#2D2845] rounded-xl p-5 shadow-lg hover:border-[#A855F7]/80 hover:scale-[1.01] transition-all duration-300 overflow-hidden"
                     >
-                      <div className="mt-2">
+                      {/* Calificación Multicriterio en la esquina superior derecha */}
+                      <div className="absolute top-4 right-4 bg-[#1e1b2e] border border-[#A855F7]/40 text-[#A855F7] px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-md">
+                        <span>★</span>
+                        <span>{proyecto.puntaje_global !== undefined && proyecto.puntaje_global !== null ? `${Number(proyecto.puntaje_global).toFixed(1)} / 10` : 'Sin calificar'}</span>
+                      </div>
+
+                      <div className="mt-2 pr-20">
                         <h3 className="text-lg font-bold text-white mb-2">{proyecto.nombre || proyecto.titulo}</h3>
                         <p className="text-xs text-[#94A3B8] line-clamp-3 mb-4">
                           {proyecto.descripcion || 'Sin descripción.'}
@@ -526,7 +532,7 @@ const Dashboard = () => {
                           proyecto.estado === 'Aprobado' || proyecto.estado === 'Completado' ? 'bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/30' :
                           proyecto.estado === 'Evaluacion' || proyecto.estado === 'En_Proceso' ? 'bg-blue-500/10 text-blue-400 border-blue-500/30' :
                           proyecto.estado === 'Caso_de_Negocio' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                          'bg-gray-500/10 target:bg-gray-400 border-gray-500/30 text-gray-400'
+                          'bg-gray-500/10 border-gray-500/30 text-gray-400'
                         }`}>
                           {proyecto.estado || 'Idea'}
                         </span>

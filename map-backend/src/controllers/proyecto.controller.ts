@@ -66,33 +66,34 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
 };
 
 // GET ALL
-export const getProyectos = async (_req: Request, res: Response): Promise<void> => {
+// En getProyectos (o la función que lista los proyectos para las tarjetas):
+export const getProyectos = async (req: Request, res: Response): Promise<void> => {
   try {
-    const proyectos = await prisma.proyecto.findMany({
-      orderBy: { fecha_inicio: 'desc' },
+    const proyectos = await prisma.proyecto.findMany();
+    
+    // Traemos directamente todas las evaluaciones multicriterio por SQL
+    let evaluaciones: any[] = [];
+    try {
+      evaluaciones = await prisma.$queryRaw`SELECT * FROM evaluacion_multicriterio` as any[];
+    } catch (e) {
+      evaluaciones = [];
+    }
+
+    const resultado = proyectos.map((p: any) => {
+      // Buscamos la evaluación que corresponda al id del proyecto
+      const evalMC = evaluaciones.find((e: any) => String(e.proyecto_id) === String(p.id));
+      
+      return {
+        ...p,
+        // Forzamos la lectura del puntaje global y aseguramos que no sea undefined
+        puntaje_global: evalMC ? evalMC.puntaje_global : (p.puntaje_global ?? null),
+      };
     });
 
-    const proyectosFormateados = proyectos.map((p: any) => ({
-      id: p.id,
-      codigo: p.codigo,
-      nombre: p.nombre,
-      descripcion: p.descripcion,
-      estado: p.estado,
-      presupuesto: p.presupuesto,
-      porcentaje_avance: p.porcentaje_avance,
-      fecha_inicio: p.fecha_inicio,
-      fecha_fin: p.fecha_fin,
-      solicitante: {
-        id: p.id_usuario || null,
-        nombre: p.lider_proyecto || 'Sin Asignar',
-        correo: '',
-        departamento: p.departamento || 'General',
-      },
-    }));
-
-    res.status(200).json({ success: true, total: proyectosFormateados.length, data: proyectosFormateados });
+    res.json(resultado);
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'Error al obtener proyectos.', error: error.message });
+    console.error('Error en getProyectos:', error);
+    res.status(500).json({ message: 'Error al obtener proyectos', error: error.message });
   }
 };
 

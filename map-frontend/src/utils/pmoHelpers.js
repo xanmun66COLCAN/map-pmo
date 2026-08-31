@@ -23,6 +23,11 @@ export const manejarOrdenamiento = (lista, columna, direccion) => {
     } else if (columna === 'area') {
       valA = (a.area || a.departamento || a.solicitante?.area || a.solicitante?.departamento || '').toString().toLowerCase().trim();
       valB = (b.area || b.departamento || b.solicitante?.area || b.solicitante?.departamento || '').toString().toLowerCase().trim();
+    } else if (columna === 'puntaje') {
+      // Usamos -1 para los no calificados de modo que siempre queden al final
+      valA = Number(a.puntaje_global !== undefined && a.puntaje_global !== null ? a.puntaje_global : -1);
+      valB = Number(b.puntaje_global !== undefined && b.puntaje_global !== null ? b.puntaje_global : -1);
+      return direccion === 'asc' ? valA - valB : valB - valA;
     } else if (columna === 'fecha') {
       valA = new Date(a.fecha_inicio || a.fecha_creacion || a.createdAt || 0).getTime();
       valB = new Date(b.fecha_inicio || b.fecha_creacion || b.createdAt || 0).getTime();
