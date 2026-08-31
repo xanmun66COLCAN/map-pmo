@@ -127,8 +127,10 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
 
 // CREATE
 export const crearProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
-  // Capturar el ID de forma limpia y directa desde el token validado
-  const idUsuarioAccion = req.usuario?.id ? Number(req.usuario.id) : null;
+  // Captura robusta del ID de usuario compatible con .id, .userId o .sub
+  const idUsuarioAccion = req.usuario?.id 
+    ? Number(req.usuario.id) 
+    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
 
   try {
     const { codigo, nombre, descripcion, fecha_inicio, fecha_fin, presupuesto, departamento, lider_proyecto, estado } = req.body;
@@ -176,10 +178,10 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
 
       await tx.logs_auditoria.create({
         data: {
-          id_usuario_accion: idUsuarioAccion, // Forzado directamente
+          id_usuario_accion: idUsuarioAccion,
           id_proyecto: proyecto.id,
           campo_modificado: 'creacion_proyecto',
-          valor_anterior: null,
+          valor_anterior: 'Nueva iniciativa',
           valor_nuevo: `Creación de iniciativa: ${nombre} (${codigo})`,
           fecha_transaccion: new Date()
         }
@@ -188,7 +190,6 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
       return proyecto;
     });
 
-    // Retornamos el éxito con los datos para que el front los muestre
     res.status(201).json({ 
       success: true, 
       message: '¡Iniciativa creada exitosamente!',
@@ -203,7 +204,10 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
 // ACTUALIZAR CALIFICACIÓN MULTICRITERIO
 export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
-  const idUsuarioAccion = req.usuario?.id ? Number(req.usuario.id) : null;
+  
+  const idUsuarioAccion = req.usuario?.id 
+    ? Number(req.usuario.id) 
+    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
 
   try {
     const { beneficio, costo, riesgo, alineacion } = req.body;
@@ -218,7 +222,6 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
       return;
     }
 
-    // 🧮 Fórmula Ponderada: Beneficio (30%), Costo (25%), Riesgo (20%), Alineación (25%)
     const scoreCalculado = 
       (Number(beneficio) * 0.30) + 
       (Number(costo) * 0.25) + 
@@ -228,6 +231,11 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
     const puntaje_global = Number(scoreCalculado.toFixed(2));
 
     const proyectoActualizado = await prisma.$transaction(async (tx) => {
+      const proyectoAnterior = await tx.proyecto.findUnique({
+        where: { id },
+        select: { puntaje_global: true }
+      });
+
       const proyecto = await tx.proyecto.update({
         where: { id },
         data: {
@@ -239,14 +247,13 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
         },
       });
 
-      // Registrar en auditoría el cambio de calificación
       await tx.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
           id_proyecto: id,
           campo_modificado: 'calificacion_multicriterio',
-          valor_anterior: null,
-          valor_nuevo: `Actualización de puntaje global: ${puntaje_global}/10`,
+          valor_anterior: `Evaluación previa: ${proyectoAnterior?.puntaje_global ?? 'Ninguna'}`,
+          valor_nuevo: `Puntaje: ${puntaje_global}/10 (B:${beneficio}, C:${costo}, R:${riesgo}, A:${alineacion})`,
           fecha_transaccion: new Date(),
         },
       });
@@ -327,16 +334,12 @@ export const deleteProyecto = async (req: AuthRequest, res: Response): Promise<v
 
 // ACTUALIZAR ESTADO DE INICIATIVA / PROYECTO
 export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response): Promise<void> => {
-  console.log("🔥 RUTA ALCANZADA: /proyectos/:id/estado (o similar)");
-  console.log("📦 Body recibido:", req.body);
-  console.log("🆔 Params recibidos:", req.params);
   const id = String(req.params.id);
   const nuevoEstado = req.body.nuevoEstado || req.body.estado;
 
-  console.log("🟢 [DEBUG] Intentando cambiar estado de iniciativa");
-  console.log("🟢 ID Proyecto:", id);
-  console.log("🟢 Nuevo estado recibido:", nuevoEstado);
-  console.log("🟢 Usuario en request:", req.usuario);
+  const idUsuarioAccion = req.usuario?.id 
+    ? Number(req.usuario.id) 
+    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
 
   try {
     if (!nuevoEstado) {
@@ -357,11 +360,10 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
       data: { estado: nuevoEstado }
     });
 
-    // 📝 Registrar el cambio usando exactamente las columnas que la tabla posee
     try {
       await prisma.logs_auditoria.create({
         data: {
-          id_usuario_accion: req.usuario?.id || req.usuario?.userId || req.usuario?.sub || null,
+          id_usuario_accion: idUsuarioAccion,
           id_proyecto: id,
           campo_modificado: 'estado',
           valor_anterior: estadoAnterior,
@@ -369,7 +371,6 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
           fecha_transaccion: new Date()
         }
       });
-      console.log('✅ Cambio de estado registrado en auditoría correctamente');
     } catch (auditError) {
       console.error('❌ ERROR AL GUARDAR AUDITORÍA:', auditError);
     }
@@ -380,7 +381,6 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
       data: proyectoActualizado
     });
   } catch (error: any) {
-    console.error("❌ ERROR CRÍTICO EN actualizarestadoIniciativa:", error);
     if (!res.headersSent) {
       res.status(500).json({ 
         success: false, 
@@ -392,7 +392,7 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
 };
 
 // OBTENER LOGS DE AUDITORÍA UNIFICADOS
-export const getLogsAuditoria = async (req: AuthRequest, res: Response): Promise<void> => {
+export const getLogsAuditoria = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const logs = await prisma.logs_auditoria.findMany({
       include: {
