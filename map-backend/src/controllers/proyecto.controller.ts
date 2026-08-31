@@ -200,6 +200,71 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
+// ACTUALIZAR CALIFICACIÓN MULTICRITERIO
+export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  const idUsuarioAccion = req.usuario?.id ? Number(req.usuario.id) : null;
+
+  try {
+    const { beneficio, costo, riesgo, alineacion } = req.body;
+
+    if (
+      beneficio === undefined || 
+      costo === undefined || 
+      riesgo === undefined || 
+      alineacion === undefined
+    ) {
+      res.status(400).json({ success: false, message: 'Todos los criterios son obligatorios.' });
+      return;
+    }
+
+    // 🧮 Fórmula Ponderada: Beneficio (30%), Costo (25%), Riesgo (20%), Alineación (25%)
+    const scoreCalculado = 
+      (Number(beneficio) * 0.30) + 
+      (Number(costo) * 0.25) + 
+      (Number(riesgo) * 0.20) + 
+      (Number(alineacion) * 0.25);
+
+    const puntaje_global = Number(scoreCalculado.toFixed(2));
+
+    const proyectoActualizado = await prisma.$transaction(async (tx) => {
+      const proyecto = await tx.proyecto.update({
+        where: { id },
+        data: {
+          beneficio: Number(beneficio),
+          costo: Number(costo),
+          riesgo: Number(riesgo),
+          alineacion: Number(alineacion),
+          puntaje_global,
+        },
+      });
+
+      // Registrar en auditoría el cambio de calificación
+      await tx.logs_auditoria.create({
+        data: {
+          id_usuario_accion: idUsuarioAccion,
+          id_proyecto: id,
+          campo_modificado: 'calificacion_multicriterio',
+          valor_anterior: null,
+          valor_nuevo: `Actualización de puntaje global: ${puntaje_global}/10`,
+          fecha_transaccion: new Date(),
+        },
+      });
+
+      return proyecto;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Calificación multicriterio actualizada exitosamente',
+      data: proyectoActualizado,
+    });
+  } catch (error: any) {
+    console.error('❌ Error al actualizar calificación multicriterio:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar la evaluación.', error: error.message });
+  }
+};
+
 // UPDATE
 export const updateProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);

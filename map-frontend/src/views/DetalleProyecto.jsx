@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Edit3, Save, X, Code, Calendar, DollarSign, User, Briefcase, TrendingUp } from "lucide-react";
 import api from "../api/axiosInstance.js";
-import SeccionKpis from "../components/SeccionKpis.jsx"; // 👈 1. Importamos el componente de KPIs
+import SeccionKpis from "../components/SeccionKpis.jsx";
+import EvaluacionMulticriterio from "../components/EvaluacionMulticriterio.jsx"; // 👈 1. Importado aquí
 
 const DetalleProyecto = () => {
     const { id } = useParams();
@@ -15,7 +16,6 @@ const DetalleProyecto = () => {
     const [saving, setSaving] = useState(false);
     const [showDebug, setShowDebug] = useState(false);
 
-    // 1. Verificación robusta y flexible de roles para PostgreSQL
     const usuarioLogueado = JSON.parse(localStorage.getItem("usuario")) || {};
     const rolUsuario = String(usuarioLogueado.rol || usuarioLogueado.tipo_rol || "").toLowerCase().trim();
     const idRol = Number(usuarioLogueado.id_rol || usuarioLogueado.rol_id);
@@ -27,17 +27,12 @@ const DetalleProyecto = () => {
         rolUsuario.includes("lider") || 
         rolUsuario.includes("líder");
 
-    // Depuración en consola para verificar privilegios
-    console.log("👤 Usuario logueado:", usuarioLogueado, "→ ¿Es Admin o Líder?:", esAdminOLider);
-
     useEffect(() => {
         let active = true;
         const cargarProyecto = async () => {
             try {
                 setLoading(true);
-                console.log(`📡 Consultando detalle del proyecto ID: ${id}`);
                 const response = await api.get(`/proyectos/${id}`);
-                
                 const responseData = response.data;
                 const datosProyecto = responseData?.data || responseData;
                 
@@ -47,7 +42,6 @@ const DetalleProyecto = () => {
                 setError("");
             } catch (err) {
                 if (!active) return;
-                console.error("❌ Error al cargar detalle:", err);
                 const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
                 setError(mensaje || "No se pudo obtener la información de la iniciativa.");
                 if (err.response?.status === 401 || err.response?.status === 403) {
@@ -74,9 +68,7 @@ const DetalleProyecto = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            console.log(`💾 Guardando cambios para el proyecto ID: ${id}`);
             const response = await api.put(`/proyectos/${id}`, formData);
-            
             const responseData = response.data;
             const datosActualizados = responseData?.data || responseData;
             
@@ -85,7 +77,6 @@ const DetalleProyecto = () => {
             setIsEditing(false);
             alert("¡Iniciativa actualizada con éxito en PostgreSQL!");
         } catch (err) {
-            console.error("❌ Error al guardar cambios:", err);
             const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
             alert(`Error al guardar: ${mensaje || "No se pudo actualizar la iniciativa."}`);
         } finally {
@@ -123,7 +114,7 @@ const DetalleProyecto = () => {
     return (
         <div className="min-h-screen bg-[#0B0A0F] text-white p-6 flex flex-col items-center relative pb-24">
             <div className="w-full max-w-4xl">
-                {/* Barra Superior con el Botón de Actualizar / Guardar */}
+                {/* Barra Superior */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-[#2D2845]">
                     <button onClick={() => navigate("/dashboard")} className="text-xs text-[#94A3B8] hover:text-white flex items-center gap-2 transition-all font-semibold">
                         ← Volver al Dashboard
@@ -164,7 +155,6 @@ const DetalleProyecto = () => {
                             <h4 className="text-xs font-bold text-[#A855F7] uppercase tracking-wider flex items-center gap-2">
                                 <Code size={14} /> Inspector de Estado (JSON)
                             </h4>
-                            <span className="text-[10px] text-gray-400">Rol: {usuarioLogueado.rol || usuarioLogueado.id_rol} | Edición habilitada: {esAdminOLider ? "Sí" : "No"}</span>
                         </div>
                         <pre className="text-xs text-green-400 bg-[#0B0A0F] p-4 rounded-lg overflow-x-auto max-h-80 border border-[#2D2845]">
                             {JSON.stringify(proyecto, null, 2)}
@@ -172,7 +162,7 @@ const DetalleProyecto = () => {
                     </div>
                 )}
 
-                {/* Tarjeta Principal: Código, Nombre y Estado */}
+                {/* Tarjeta Principal */}
                 <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-6 shadow-xl mb-6">
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4 pb-4 border-b border-[#2D2845]">
                         <div>
@@ -237,9 +227,8 @@ const DetalleProyecto = () => {
                     </div>
                 </div>
 
-                {/* Grid con Todos los Campos Completos */}
+                {/* Grid con Campos */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                    {/* Líder */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <User size={12} /> Líder del Proyecto
@@ -257,7 +246,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Departamento */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <Briefcase size={12} /> Departamento
@@ -275,7 +263,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Solicitante */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1">Solicitante</span>
                         <span className="text-sm font-semibold text-white">
@@ -285,7 +272,6 @@ const DetalleProyecto = () => {
                         </span>
                     </div>
 
-                    {/* Presupuesto */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <DollarSign size={12} /> Presupuesto
@@ -305,7 +291,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Costo Real */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1">Costo Real</span>
                         {isEditing ? (
@@ -323,7 +308,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Porcentaje de Avance */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <TrendingUp size={12} /> % Avance
@@ -348,7 +332,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Fecha de Inicio */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <Calendar size={12} /> Fecha de Inicio
@@ -368,7 +351,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Fecha de Finalización */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <Calendar size={12} /> Fecha de Finalización
@@ -387,6 +369,17 @@ const DetalleProyecto = () => {
                             </span>
                         )}
                     </div>
+                </div>
+
+                {/* ⚖️ SECCIÓN DE CALIFICACIÓN MULTICRITERIO */}
+                <div className="mb-6">
+                    <EvaluacionMulticriterio 
+                        proyecto={proyecto} 
+                        onActualizado={(proyectoActualizado) => {
+                            setProyecto(proyectoActualizado);
+                            setFormData(proyectoActualizado);
+                        }} 
+                    />
                 </div>
 
                 {/* 📊 SECCIÓN DE KPIs / INDICADORES CLAVE */}

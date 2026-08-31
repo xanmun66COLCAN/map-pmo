@@ -22,20 +22,28 @@ model Usuario {
 }
 
 model Proyecto {
-  id                String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  codigo            String                 @unique @db.VarChar(20)
-  nombre            String                 @db.VarChar(150)
-  descripcion       String?
-  estado            estado_proyecto_enum   @default(Caso_de_Negocio)
-  departamento      String                 @db.VarChar(100)
-  lider_proyecto    String                 @db.VarChar(100)
-  presupuesto       Decimal                @default(0.00) @db.Decimal(12, 2)
-  costo_real        Decimal                @default(0.00) @db.Decimal(12, 2)
-  porcentaje_avance Int                    @default(0)
-  fecha_inicio      DateTime               @db.Date
-  fecha_fin         DateTime               @db.Date
-  creado_en         DateTime?              @default(now()) @db.Timestamptz(6)
-  actualizado_en    DateTime?              @default(now()) @db.Timestamptz(6)
+  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  codigo              String               @unique @db.VarChar(20)
+  nombre              String               @db.VarChar(150)
+  descripcion         String?
+  estado              estado_proyecto_enum @default(Caso_de_Negocio)
+  departamento        String               @db.VarChar(100)
+  lider_proyecto      String               @db.VarChar(100)
+  presupuesto         Decimal              @default(0.00) @db.Decimal(12, 2)
+  costo_real          Decimal              @default(0.00) @db.Decimal(12, 2)
+  porcentaje_avance   Int                  @default(0)
+  fecha_inicio        DateTime             @db.Date
+  fecha_fin           DateTime             @db.Date
+  
+  // ⚖️ Nuevos campos para la Calificación Multicriterio
+  beneficio           Int                  @default(5) // Peso: 30%
+  costo               Int                  @default(5) // Peso: 25% (Inverso)
+  riesgo              Int                  @default(5) // Peso: 20% (Inverso)
+  alineacion          Int                  @default(5) // Peso: 25%
+  puntaje_global      Decimal              @default(5.00) @db.Decimal(5, 2)
+
+  creado_en           DateTime?            @default(now()) @db.Timestamptz(6)
+  actualizado_en      DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("proyectos")
 }
