@@ -284,16 +284,22 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       codigo: _codigo, 
       creado_en: _creado_en, 
       actualizado_en: _actualizado_en, 
+      estado: _estado, // 👈 Extraemos y omitimos el estado del update general para evitar conflictos de enum
       solicitante, 
       fecha_inicio, 
       fecha_fin, 
       presupuesto, 
       porcentaje_avance, 
       costo_real, 
+      puntaje_global, 
       ...rest 
     } = req.body;
 
     const dataToUpdate: any = { ...rest };
+
+    if (puntaje_global !== undefined && puntaje_global !== '') {
+      dataToUpdate.puntaje_global = Number(puntaje_global);
+    }
 
     if (fecha_inicio && fecha_inicio.trim() !== '') {
       dataToUpdate.fecha_inicio = new Date(fecha_inicio);
@@ -313,10 +319,11 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
     } 
 
     const proyectoActualizado = await prisma.$transaction(async (tx) => {
+      // 👈 Forzamos el tipado a 'any' para evitar que TS rechace la propiedad si aún no está en el schema
       const proyectoAnterior = await tx.proyecto.findUnique({
         where: { id },
         select: { project_manager: true }
-      });
+      } as any) as any;
 
       const proyecto = await tx.proyecto.update({
         where: { id },
@@ -327,7 +334,6 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
         dataToUpdate.project_manager !== undefined && 
         dataToUpdate.project_manager !== proyectoAnterior?.project_manager
       ) {
-        // Incluye explícitamente el ID del proyecto actualizado
         await tx.logs_auditoria.create({
           data: {
             id_usuario_accion: idUsuarioAccion,
