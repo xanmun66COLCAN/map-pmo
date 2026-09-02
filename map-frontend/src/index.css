@@ -13,3 +13,13 @@
 .animate-float {
   animation: float 3.5s ease-in-out infinite;
 }
+
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}

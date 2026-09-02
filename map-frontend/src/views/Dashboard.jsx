@@ -520,9 +520,15 @@ const Dashboard = () => {
 
                       <div className="mt-2 pr-20">
                         <h3 className="text-lg font-bold text-white mb-2">{proyecto.nombre || proyecto.titulo}</h3>
-                        <p className="text-xs text-[#94A3B8] line-clamp-3 mb-4">
+                        <p className="text-xs text-[#94A3B8] line-clamp-3 mb-3">
                           {proyecto.descripcion || 'Sin descripción.'}
                         </p>
+                      </div>
+
+                      {/* NUEVO: Visualización del Project Manager a cargo en la tarjeta */}
+                      <div className="flex items-center gap-1.5 text-xs text-purple-300 mb-4 bg-[#1A1726] px-3 py-1.5 rounded-lg border border-[#2D2845]">
+                        <span className="font-semibold text-[#64748B]">PM a cargo:</span>
+                        <span className="truncate font-medium">{proyecto.project_manager || 'Sin asignar'}</span>
                       </div>
 
                       <div className="flex justify-between items-center text-[10px] uppercase font-semibold tracking-wider pt-4 border-t border-[#2D2845]">

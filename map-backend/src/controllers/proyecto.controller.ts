@@ -7,10 +7,32 @@ export interface AuthRequest extends Request {
 
 const prisma = new PrismaClient();
 
+// Función auxiliar para calcular el avance temporal estimado (0% a 100%)
+const calcularAvanceAutomatico = (fechaInicio: Date | null, fechaFin: Date | null, estadoActual: string): number => {
+  if (estadoActual === 'Completado') return 100;
+  if (estadoActual === 'Cancelado') return 0; // 👈 Quitamos 'Caso_de_Negocio' para que calcule por fechas si ya empezaron
+
+  if (!fechaInicio || !fechaFin) return 0;
+
+  const hoy = new Date().getTime();
+  const inicio = new Date(fechaInicio).getTime();
+  const fin = new Date(fechaFin).getTime();
+
+  if (fin <= inicio) return hoy >= fin ? 100 : 0;
+  if (hoy < inicio) return 0;
+  if (hoy >= fin) return 100;
+
+  const totalDias = fin - inicio;
+  const diasTranscurridos = hoy - inicio;
+
+  const porcentaje = (diasTranscurridos / totalDias) * 100;
+  return Math.min(Math.max(Math.round(porcentaje), 0), 100);
+};
+
 // GET: Dashboard
 export const getProyectosDashboard = async (_req: Request, res: Response): Promise<void> => {
   try {
-    const [totalProyectos, proyectosPorEstado, agregadoPresupuesto, ultimosProyectos] = await Promise.all([
+    const [totalProyectos, proyectosPorEstado, agregadoPresupuesto, todosLosProyectos, ultimosProyectos] = await Promise.all([
       prisma.proyecto.count(),
       prisma.proyecto.groupBy({
         by: ['estado'],
@@ -18,8 +40,8 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
       }),
       prisma.proyecto.aggregate({
         _sum: { presupuesto: true, costo_real: true },
-        _avg: { porcentaje_avance: true },
       }),
+      prisma.proyecto.findMany({ select: { fecha_inicio: true, fecha_fin: true, estado: true, presupuesto: true, costo_real: true } }),
       prisma.proyecto.findMany({
         take: 5,
         orderBy: { fecha_inicio: 'desc' },
@@ -35,29 +57,52 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
 
     const totalPresupuesto = Number(agregadoPresupuesto._sum?.presupuesto || 0);
     const totalCostoReal = Number(agregadoPresupuesto._sum?.costo_real || 0);
+    const variacionPresupuestaria = totalPresupuesto - totalCostoReal;
+    const tieneDesviacionNegativaGlobal = totalCostoReal > totalPresupuesto;
+
+    // Promedio de avance general calculado dinámicamente
+    let sumaAvances = 0;
+    if (todosLosProyectos.length > 0) {
+      todosLosProyectos.forEach(p => {
+        sumaAvances += calcularAvanceAutomatico(p.fecha_inicio, p.fecha_fin, p.estado);
+      });
+    }
+    const promedioAvanceGeneral = todosLosProyectos.length > 0 ? Number((sumaAvances / todosLosProyectos.length).toFixed(2)) : 0;
 
     res.json({
       success: true,
       data: {
         resumen: {
           totalProyectos,
-          promedioAvanceGeneral: Number((agregadoPresupuesto._avg?.porcentaje_avance || 0).toFixed(2)),
+          promedioAvanceGeneral,
         },
         finanzas: {
           totalPresupuesto,
           totalCostoReal,
-          variacionPresupuestaria: totalPresupuesto - totalCostoReal,
+          variacionPresupuestaria,
+          alertaDesviacionNegativa: tieneDesviacionNegativaGlobal,
+          mensajeDesviacion: tieneDesviacionNegativaGlobal 
+            ? `⚠️ Alerta: Sobrecosto detectado por valor de $${Math.abs(variacionPresupuestaria).toLocaleString()}` 
+            : 'Presupuesto dentro de los límites esperados',
         },
         distribucionPorEstado: estadoConteo,
-        proyectosRecientes: ultimosProyectos.map((p) => ({
-          ...p,
-          solicitante: {
-            id: (p as any).id_usuario || null,
-            nombre: p.lider_proyecto || 'Sin Asignar',
-            correo: '',
-            departamento: p.departamento || 'General',
-          },
-        })),
+        proyectosRecientes: ultimosProyectos.map((p: any) => {
+          const pres = Number(p.presupuesto || 0);
+          const real = Number(p.costo_real || 0);
+          const desviacionProyecto = pres - real;
+          return {
+            ...p,
+            porcentaje_avance: calcularAvanceAutomatico(p.fecha_inicio, p.fecha_fin, p.estado),
+            alerta_desviacion: real > pres,
+            variacion_presupuesto: desviacionProyecto,
+            solicitante: {
+              id: p.id_usuario || null,
+              nombre: p.lider_proyecto || 'Sin Asignar',
+              correo: '',
+              departamento: p.departamento || 'General',
+            },
+          };
+        }),
       },
     });
   } catch (error: any) {
@@ -79,10 +124,20 @@ export const getProyectos = async (req: Request, res: Response): Promise<void> =
 
     const resultado = proyectos.map((p: any) => {
       const evalMC = evaluaciones.find((e: any) => String(e.proyecto_id) === String(p.id));
+      const presupuestoNum = Number(p.presupuesto || 0);
+      const costoRealNum = Number(p.costo_real || 0);
+      const tieneDesviacion = costoRealNum > presupuestoNum;
       
       return {
         ...p,
+        porcentaje_avance: calcularAvanceAutomatico(p.fecha_inicio, p.fecha_fin, p.estado),
         puntaje_global: evalMC ? evalMC.puntaje_global : (p.puntaje_global ?? null),
+        // Estandarización de nombres para coincidir con el Frontend y el Detail
+        alerta_desviacion_negativa: tieneDesviacion,
+        diferencia_presupuesto: presupuestoNum - costoRealNum,
+        mensaje_desviacion: tieneDesviacion 
+          ? `⚠️ Alerta: El costo real ($${costoRealNum.toLocaleString()}) supera el presupuesto planeado ($${presupuestoNum.toLocaleString()}).` 
+          : 'Presupuesto saludable'
       };
     });
 
@@ -106,8 +161,18 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
       return;
     }
 
+    const presupuestoNum = Number(proyecto.presupuesto || 0);
+    const costoRealNum = Number(proyecto.costo_real || 0);
+    const tieneDesviacion = costoRealNum > presupuestoNum;
+
     const proyectoFormateado = {
       ...proyecto,
+      porcentaje_avance: calcularAvanceAutomatico(proyecto.fecha_inicio, proyecto.fecha_fin, proyecto.estado),
+      alerta_desviacion_negativa: tieneDesviacion,
+      diferencia_presupuesto: presupuestoNum - costoRealNum,
+      mensaje_desviacion: tieneDesviacion 
+        ? `⚠️ Alerta: El costo real ($${costoRealNum.toLocaleString()}) supera el presupuesto planeado ($${presupuestoNum.toLocaleString()}).` 
+        : 'Presupuesto saludable',
       solicitante: {
         id: proyecto.id_usuario || null,
         nombre: proyecto.lider_proyecto || 'Sin Asignar',
@@ -136,19 +201,32 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
       return;
     }
 
+    const estadoInicial = estado || 'Caso_de_Negocio';
+    const fechaInicioParsed = fecha_inicio ? new Date(fecha_inicio) : new Date();
+    const fechaFinParsed = fecha_fin ? new Date(fecha_fin) : null;
+    
+    // Cálculo automático inicial del avance basado en fechas y estado
+    const avanceInicial = calcularAvanceAutomatico(fechaInicioParsed, fechaFinParsed, estadoInicial);
+
+    const dataProyecto: any = {
+      codigo,
+      nombre,
+      descripcion: descripcion || '',
+      fecha_inicio: fechaInicioParsed,
+      presupuesto: presupuesto !== undefined ? Number(presupuesto) : 0,
+      departamento: departamento || '',
+      lider_proyecto: lider_proyecto || '',
+      estado: estadoInicial,
+      porcentaje_avance: avanceInicial,
+    };
+
+    if (fechaFinParsed) {
+      dataProyecto.fecha_fin = fechaFinParsed;
+    }
+
     const nuevoProyecto = await prisma.$transaction(async (tx) => {
       const proyecto = await tx.proyecto.create({
-        data: {
-          codigo,
-          nombre,
-          descripcion: descripcion || '',
-          fecha_inicio: fecha_inicio ? new Date(fecha_inicio) : new Date(),
-          ...(fecha_fin && { fecha_fin: new Date(fecha_fin) }),
-          presupuesto: presupuesto !== undefined ? Number(presupuesto) : 0,
-          departamento: departamento || '',
-          lider_proyecto: lider_proyecto || '',
-          estado: estado || 'Caso_de_Negocio',
-        },
+        data: dataProyecto,
       });
 
       await tx.kpi.createMany({
@@ -172,7 +250,6 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
         ]
       });
 
-      // Incluye explícitamente el ID de la iniciativa recién creada
       await tx.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
@@ -190,7 +267,10 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
     res.status(201).json({ 
       success: true, 
       message: '¡Iniciativa creada exitosamente!',
-      data: nuevoProyecto,
+      data: {
+        ...nuevoProyecto,
+        porcentaje_avance: avanceInicial
+      },
       usuarioRegistrador: req.usuario?.correo || 'Usuario del Sistema'
     });
   } catch (error: any) {
@@ -244,7 +324,6 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
         },
       });
 
-      // Incluye explícitamente el ID del proyecto evaluado
       await tx.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
@@ -262,7 +341,10 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
     res.status(200).json({
       success: true,
       message: 'Calificación multicriterio actualizada exitosamente',
-      data: proyectoActualizado,
+      data: {
+        ...proyectoActualizado,
+        porcentaje_avance: calcularAvanceAutomatico(proyectoActualizado.fecha_inicio, proyectoActualizado.fecha_fin, proyectoActualizado.estado)
+      },
     });
   } catch (error: any) {
     console.error('❌ Error al actualizar calificación multicriterio:', error);
@@ -284,14 +366,18 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       codigo: _codigo, 
       creado_en: _creado_en, 
       actualizado_en: _actualizado_en, 
-      estado: _estado, // 👈 Extraemos y omitimos el estado del update general para evitar conflictos de enum
+      estado: _estado, 
+      porcentaje_avance: _porcentaje_avance, 
       solicitante, 
       fecha_inicio, 
       fecha_fin, 
       presupuesto, 
-      porcentaje_avance, 
       costo_real, 
       puntaje_global, 
+      // 👇 Filtramos también los campos calculados que vienen del cliente para que Prisma no falle
+      alerta_desviacion_negativa,
+      diferencia_presupuesto,
+      mensaje_desviacion,
       ...rest 
     } = req.body;
 
@@ -301,29 +387,29 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       dataToUpdate.puntaje_global = Number(puntaje_global);
     }
 
-    if (fecha_inicio && fecha_inicio.trim() !== '') {
+    if (fecha_inicio && String(fecha_inicio).trim() !== '') {
       dataToUpdate.fecha_inicio = new Date(fecha_inicio);
     }
-    if (fecha_fin && fecha_fin.trim() !== '') {
+    if (fecha_fin && String(fecha_fin).trim() !== '') {
       dataToUpdate.fecha_fin = new Date(fecha_fin);
     }
 
     if (presupuesto !== undefined && presupuesto !== '') {
       dataToUpdate.presupuesto = Number(presupuesto);
     }
-    if (porcentaje_avance !== undefined && porcentaje_avance !== '') {
-      dataToUpdate.porcentaje_avance = parseInt(porcentaje_avance, 10);
-    }
     if (costo_real !== undefined && costo_real !== '') {
       dataToUpdate.costo_real = Number(costo_real);
     } 
 
     const proyectoActualizado = await prisma.$transaction(async (tx) => {
-      // 👈 Forzamos el tipado a 'any' para evitar que TS rechace la propiedad si aún no está en el schema
       const proyectoAnterior = await tx.proyecto.findUnique({
         where: { id },
-        select: { project_manager: true }
+        select: { project_manager: true, fecha_inicio: true, fecha_fin: true, estado: true }
       } as any) as any;
+
+      const fInicio = dataToUpdate.fecha_inicio || proyectoAnterior?.fecha_inicio;
+      const fFin = dataToUpdate.fecha_fin || proyectoAnterior?.fecha_fin;
+      dataToUpdate.porcentaje_avance = calcularAvanceAutomatico(fInicio, fFin, proyectoAnterior?.estado || 'En_Proceso');
 
       const proyecto = await tx.proyecto.update({
         where: { id },
@@ -349,7 +435,18 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       return proyecto;
     });
 
-    res.status(200).json({ success: true, data: proyectoActualizado });
+    const presActual = Number(proyectoActualizado.presupuesto || 0);
+    const costoActual = Number(proyectoActualizado.costo_real || 0);
+
+    res.status(200).json({ 
+      success: true, 
+      data: {
+        ...proyectoActualizado,
+        porcentaje_avance: calcularAvanceAutomatico(proyectoActualizado.fecha_inicio, proyectoActualizado.fecha_fin, proyectoActualizado.estado),
+        alerta_desviacion_negativa: costoActual > presActual,
+        diferencia_presupuesto: presActual - costoActual
+      } 
+    });
   } catch (error: any) {
     console.error('❌ Error detallado al actualizar proyecto en Prisma:', error);
     res.status(500).json({ success: false, message: 'Error al actualizar el proyecto.', error: error.message });
@@ -389,14 +486,17 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
     }
 
     const estadoAnterior = proyectoExistente.estado;
+    const nuevoAvance = calcularAvanceAutomatico(proyectoExistente.fecha_inicio, proyectoExistente.fecha_fin, nuevoEstado);
 
     const proyectoActualizado = await prisma.proyecto.update({
       where: { id },
-      data: { estado: nuevoEstado }
+      data: { 
+        estado: nuevoEstado,
+        porcentaje_avance: nuevoAvance 
+      }
     });
 
     try {
-      // Incluye explícitamente el ID de la iniciativa cuyo estado cambió
       await prisma.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
@@ -411,10 +511,17 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
       console.error('❌ ERROR AL GUARDAR AUDITORÍA:', auditError);
     }
 
+    const presActual = Number(proyectoActualizado.presupuesto || 0);
+    const costoActual = Number(proyectoActualizado.costo_real || 0);
+
     res.status(200).json({
       success: true,
       message: 'Estado actualizado exitosamente',
-      data: proyectoActualizado
+      data: {
+        ...proyectoActualizado,
+        porcentaje_avance: nuevoAvance,
+        alerta_desviacion_negativa: costoActual > presActual
+      }
     });
   } catch (error: any) {
     if (!res.headersSent) {
@@ -437,7 +544,6 @@ export const getLogsAuditoria = async (_req: AuthRequest, res: Response): Promis
       orderBy: { fecha_transaccion: 'desc' }
     });
 
-    // Traemos todos los proyectos para relacionarlos de manera limpia
     const proyectos = await prisma.proyecto.findMany({
       select: { id: true, codigo: true, nombre: true }
     });
@@ -446,7 +552,6 @@ export const getLogsAuditoria = async (_req: AuthRequest, res: Response): Promis
       const proyectoEncontrado = proyectos.find(p => p.id === log.id_proyecto);
       return {
         ...log,
-        // Adjuntamos el objeto proyecto formateado para usarlo fácilmente en el frontend
         proyecto: proyectoEncontrado ? { codigo: proyectoEncontrado.codigo, nombre: proyectoEncontrado.nombre } : null,
         proyecto_info: proyectoEncontrado ? `${proyectoEncontrado.codigo} - ${proyectoEncontrado.nombre}` : 'GLOBAL'
       };
@@ -473,7 +578,6 @@ export const agregarSeguimiento = async (req: AuthRequest, res: Response): Promi
     const { fecha_seguimiento, detalle_seguimiento, proximo_seguimiento, temas_pendientes, responsable_pendientes } = req.body;
 
     const resultado = await prisma.$transaction(async (tx) => {
-      // 1. Guardar en la bitácora
       const nuevoSeguimiento = await (tx as any).bitacora_seguimiento.create({
         data: {
           proyecto_id: idProyecto,
@@ -486,11 +590,10 @@ export const agregarSeguimiento = async (req: AuthRequest, res: Response): Promi
         }
       });
 
-      // 2. Registrar en la auditoría unificada incluyendo el ID de la iniciativa/proyecto
       await tx.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
-          id_proyecto: idProyecto, // <-- ID de la iniciativa vinculado correctamente
+          id_proyecto: idProyecto,
           campo_modificado: 'nuevo_seguimiento_bitacora',
           valor_anterior: 'Sin registro previo',
           valor_nuevo: `Seguimiento añadido: ${(detalle_seguimiento || '').substring(0, 100)}`,
