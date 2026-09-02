@@ -17,7 +17,7 @@ const DetalleProyecto = () => {
     const [saving, setSaving] = useState(false);
     const [showDebug, setShowDebug] = useState(false);
     
-    // Estado para controlar el Reporte Ejecutivo
+    // Estado controlado para el Reporte Ejecutivo (Inicia en false)
     const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
     
     // Estados para la Bitácora de Seguimiento Ejecutivo
@@ -91,7 +91,6 @@ const DetalleProyecto = () => {
     const handleSave = async () => {
         try {
             setSaving(true);
-            // Desestructuramos para asegurar que jamás se envíe entregables_completados
             const { entregables_completados, ...datosAEnviar } = formData;
 
             const response = await api.put(`/proyectos/${id}`, datosAEnviar);
@@ -506,7 +505,7 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Porcentaje de Avance (Control de Cronograma) */}
+                    {/* Porcentaje de Avance */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <TrendingUp size={12} /> Porcentaje de Avance (%)
@@ -529,49 +528,12 @@ const DetalleProyecto = () => {
                                         style={{ width: `${proyecto.porcentaje_avance || 0}%` }}
                                     ></div>
                                 </div>
-                                <span className="text-sm font-black text-purple-400">{proyecto.porcentaje_avance || 0}%</span>
+                                <span className="text-sm font-bold text-purple-300">{proyecto.porcentaje_avance || 0}%</span>
                             </div>
                         )}
                     </div>
 
-                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
-                            <DollarSign size={12} /> Presupuesto Planeado
-                        </span>
-                        {isEditing ? (
-                            <input
-                                type="number"
-                                name="presupuesto"
-                                value={formData.presupuesto || 0}
-                                onChange={handleChange}
-                                className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
-                            />
-                        ) : (
-                            <span className="text-sm font-black text-white">
-                                ${Number(proyecto.presupuesto || 0).toLocaleString()}
-                            </span>
-                        )}
-                    </div>
-
-                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
-                            <DollarSign size={12} /> Costo Real Ejecutado
-                        </span>
-                        {isEditing ? (
-                            <input
-                                type="number"
-                                name="costo_real"
-                                value={formData.costo_real || 0}
-                                onChange={handleChange}
-                                className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
-                            />
-                        ) : (
-                            <span className="text-sm font-black text-purple-300">
-                                ${Number(proyecto.costo_real || 0).toLocaleString()}
-                            </span>
-                        )}
-                    </div>
-
+                    {/* Fecha de Inicio */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <Calendar size={12} /> Fecha de Inicio
@@ -585,46 +547,117 @@ const DetalleProyecto = () => {
                                 className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
                             />
                         ) : (
-                            <span className="text-xs font-semibold text-white">
+                            <span className="text-sm font-semibold text-white">
                                 {proyecto.fecha_inicio ? new Date(proyecto.fecha_inicio).toLocaleDateString() : "No definida"}
                             </span>
                         )}
                     </div>
 
+                    {/* Fecha de Fin */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
-                            <Calendar size={12} /> Fecha Fin Estimada
+                            <Calendar size={12} /> Fecha Fin Prevista
                         </span>
                         {isEditing ? (
                             <input
                                 type="date"
-                                name="fecha_fin_estimada"
-                                value={formData.fecha_fin_estimada ? formData.fecha_fin_estimada.split("T")[0] : ""}
+                                name="fecha_fin"
+                                value={formData.fecha_fin ? formData.fecha_fin.split("T")[0] : ""}
                                 onChange={handleChange}
                                 className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
                             />
                         ) : (
-                            <span className="text-xs font-semibold text-white">
-                                {proyecto.fecha_fin_estimada ? new Date(proyecto.fecha_fin_estimada).toLocaleDateString() : "No definida"}
+                            <span className="text-sm font-semibold text-white">
+                                {proyecto.fecha_fin ? new Date(proyecto.fecha_fin).toLocaleDateString() : "No definida"}
                             </span>
                         )}
                     </div>
+
+                    {/* Presupuesto Planificado */}
+                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
+                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
+                            <DollarSign size={12} /> Presupuesto Planificado
+                        </span>
+                        {isEditing ? (
+                            <input
+                                type="number"
+                                name="presupuesto"
+                                value={formData.presupuesto || ""}
+                                onChange={handleChange}
+                                className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
+                            />
+                        ) : (
+                            <span className="text-sm font-semibold text-green-400">
+                                ${Number(proyecto.presupuesto || 0).toLocaleString()}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Costo Real Ejecutado */}
+                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
+                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
+                            <DollarSign size={12} /> Costo Real Ejecutado
+                        </span>
+                        {isEditing ? (
+                            <input
+                                type="number"
+                                name="costo_real"
+                                value={formData.costo_real || ""}
+                                onChange={handleChange}
+                                className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
+                            />
+                        ) : (
+                            <span className="text-sm font-semibold text-amber-400">
+                                ${Number(proyecto.costo_real || 0).toLocaleString()}
+                            </span>
+                        )}
+                    </div>
+
+                    {/* % de Ejecución Presupuestal */}
+                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold flex items-center gap-1">
+                                <TrendingUp size={12} /> % Ejecución Presupuestal
+                            </span>
+                        </div>
+                        {(() => {
+                            const p = Number(proyecto?.presupuesto || 0);
+                            const c = Number(proyecto?.costo_real || 0);
+                            const porcentajeEjecucion = p > 0 ? Math.min(Math.round((c / p) * 100), 100) : 0;
+                            const superaPresupuesto = c > p;
+
+                            return (
+                                <div className="flex items-center gap-2">
+                                    <div className="flex-1 bg-[#0B0A0F] h-2 rounded-full overflow-hidden border border-[#2D2845]">
+                                        <div 
+                                            className={`h-full rounded-full transition-all duration-500 ${superaPresupuesto ? 'bg-red-500' : 'bg-emerald-500'}`} 
+                                            style={{ width: `${Math.min(porcentajeEjecucion, 100)}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className={`text-sm font-bold ${superaPresupuesto ? 'text-red-400' : 'text-emerald-400'}`}>
+                                        {p > 0 ? Math.round((c / p) * 100) : 0}%
+                                    </span>
+                                </div>
+                            );
+                        })()}
+                    </div>
                 </div>
 
-                {/* Secciones de KPIs y Evaluación Multicriterio */}
-                <div className="space-y-6 w-full">
-                    <SeccionKpis proyectoId={id} />
-                    <EvaluacionMulticriterio proyectoId={id} />
+                {/* Secciones Adicionales */}
+                <div className="space-y-6">
+                    <SeccionKpis proyectoId={id} esAdminOLider={esAdminOLider} />
+                    <EvaluacionMulticriterio proyecto={proyecto} setProyecto={setProyecto} isEditing={isEditing} formData={formData} setFormData={setFormData} />
                 </div>
             </div>
 
-            {/* Modal de Reporte Ejecutivo */}
-            <ReporteEjecutivoModal 
-                isOpen={mostrarModalReporte} 
-                onClose={() => setMostrarModalReporte(false)} 
-                proyecto={proyecto} 
-                bitacora={bitacora} 
-            />
+            {/* Modal de Reporte Ejecutivo Controlado */}
+            {mostrarModalReporte && (
+                <ReporteEjecutivoModal 
+                    proyecto={proyecto} 
+                    bitacora={bitacora} 
+                    onClose={() => setMostrarModalReporte(false)} 
+                />
+            )}
         </div>
     );
 };
