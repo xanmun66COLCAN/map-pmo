@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Edit3, Save, X, Code, Calendar, DollarSign, User, Briefcase, TrendingUp } from "lucide-react";
+import { Edit3, Save, X, Code, Calendar, DollarSign, User, Briefcase, TrendingUp, BookOpen, Plus } from "lucide-react";
 import api from "../api/axiosInstance.js";
 import SeccionKpis from "../components/SeccionKpis.jsx";
-import EvaluacionMulticriterio from "../components/EvaluacionMulticriterio.jsx"; // 👈 1. Importado aquí
+import EvaluacionMulticriterio from "../components/EvaluacionMulticriterio.jsx";
 
 const DetalleProyecto = () => {
     const { id } = useParams();
@@ -16,6 +16,18 @@ const DetalleProyecto = () => {
     const [saving, setSaving] = useState(false);
     const [showDebug, setShowDebug] = useState(false);
 
+    // Estados para la Bitácora de Seguimiento Ejecutivo
+    const [bitacora, setBitacora] = useState([]);
+    const [mostrarFormBitacora, setMostrarFormBitacora] = useState(false);
+    const [nuevoSeguimiento, setNuevoSeguimiento] = useState({
+        fecha_seguimiento: new Date().toISOString().split("T")[0],
+        detalle_seguimiento: "",
+        proximo_seguimiento: "",
+        temas_pendientes: "",
+        responsable_pendientes: ""
+    });
+    const [guardandoBitacora, setGuardandoBitacora] = useState(false);
+
     const usuarioLogueado = JSON.parse(localStorage.getItem("usuario")) || {};
     const rolUsuario = String(usuarioLogueado.rol || usuarioLogueado.tipo_rol || "").toLowerCase().trim();
     const idRol = Number(usuarioLogueado.id_rol || usuarioLogueado.rol_id);
@@ -27,18 +39,25 @@ const DetalleProyecto = () => {
         rolUsuario.includes("lider") || 
         rolUsuario.includes("líder");
 
+    // Cargar Proyecto y Bitácora
     useEffect(() => {
         let active = true;
-        const cargarProyecto = async () => {
+        const cargarDatos = async () => {
             try {
                 setLoading(true);
-                const response = await api.get(`/proyectos/${id}`);
-                const responseData = response.data;
-                const datosProyecto = responseData?.data || responseData;
-                
+                const [resProyecto, resBitacora] = await Promise.all([
+                    api.get(`/proyectos/${id}`),
+                    api.get(`/proyectos/${id}/bitacora`).catch(() => ({ data: { data: [] } }))
+                ]);
+
                 if (!active) return;
+                
+                const datosProyecto = resProyecto.data?.data || resProyecto.data;
+                const datosBitacora = resBitacora.data?.data || resBitacora.data || [];
+
                 setProyecto(datosProyecto);
                 setFormData(datosProyecto);
+                setBitacora(datosBitacora);
                 setError("");
             } catch (err) {
                 if (!active) return;
@@ -53,7 +72,7 @@ const DetalleProyecto = () => {
             }
         };
 
-        if (id) cargarProyecto();
+        if (id) cargarDatos();
         return () => { active = false; };
     }, [id, navigate]);
 
@@ -81,6 +100,36 @@ const DetalleProyecto = () => {
             alert(`Error al guardar: ${mensaje || "No se pudo actualizar la iniciativa."}`);
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleGuardarSeguimiento = async (e) => {
+        e.preventDefault();
+        if (!nuevoSeguimiento.detalle_seguimiento) {
+            alert("El detalle del seguimiento es obligatorio.");
+            return;
+        }
+
+        try {
+            setGuardandoBitacora(true);
+            const response = await api.post(`/proyectos/${id}/bitacora`, nuevoSeguimiento);
+            const creado = response.data?.data || response.data;
+
+            setBitacora([creado, ...bitacora]);
+            setMostrarFormBitacora(false);
+            setNuevoSeguimiento({
+                fecha_seguimiento: new Date().toISOString().split("T")[0],
+                detalle_seguimiento: "",
+                proximo_seguimiento: "",
+                temas_pendientes: "",
+                responsable_pendientes: ""
+            });
+            alert("Seguimiento registrado exitosamente en la bitácora.");
+        } catch (err) {
+            const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
+            alert(`Error al registrar seguimiento: ${mensaje}`);
+        } finally {
+            setGuardandoBitacora(false);
         }
     };
 
@@ -227,6 +276,148 @@ const DetalleProyecto = () => {
                     </div>
                 </div>
 
+                {/* 📖 BITÁCORA DE SEGUIMIENTO EJECUTIVO */}
+                <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-6 shadow-xl mb-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-[#2D2845]">
+                        <div>
+                            <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                <BookOpen size={16} className="text-[#A855F7]" /> Bitácora de Seguimiento Ejecutivo
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-0.5">Historial estructurado para el reporte informativo de la iniciativa.</p>
+                        </div>
+                        {esAdminOLider && (
+                            <button
+                                onClick={() => setMostrarFormBitacora(!mostrarFormBitacora)}
+                                className="bg-[#A855F7]/20 hover:bg-[#A855F7]/30 text-[#A855F7] border border-[#A855F7]/40 text-xs px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all"
+                            >
+                                <Plus size={14} /> {mostrarFormBitacora ? "Cerrar Formulario" : "Agregar Seguimiento"}
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Formulario Nuevo Seguimiento */}
+                    {mostrarFormBitacora && (
+                        <form onSubmit={handleGuardarSeguimiento} className="bg-[#0B0A0F] border border-[#2D2845] p-4 rounded-xl mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Fecha de Seguimiento</label>
+                                <input
+                                    type="date"
+                                    value={nuevoSeguimiento.fecha_seguimiento}
+                                    onChange={(e) => setNuevoSeguimiento({ ...nuevoSeguimiento, fecha_seguimiento: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Responsable de Pendientes</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ej. Nombre del responsable"
+                                    value={nuevoSeguimiento.responsable_pendientes}
+                                    onChange={(e) => setNuevoSeguimiento({ ...nuevoSeguimiento, responsable_pendientes: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Detalle del Seguimiento *</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder="Resumen ejecutivo del avance en este periodo..."
+                                    value={nuevoSeguimiento.detalle_seguimiento}
+                                    onChange={(e) => setNuevoSeguimiento({ ...nuevoSeguimiento, detalle_seguimiento: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Temas Pendientes</label>
+                                <textarea
+                                    rows={2}
+                                    placeholder="Bloqueos, tareas abiertas o riesgos..."
+                                    value={nuevoSeguimiento.temas_pendientes}
+                                    onChange={(e) => setNuevoSeguimiento({ ...nuevoSeguimiento, temas_pendientes: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Próximos Seguimientos</label>
+                                <textarea
+                                    rows={2}
+                                    placeholder="Metas o fechas para el siguiente control..."
+                                    value={nuevoSeguimiento.proximo_seguimiento}
+                                    onChange={(e) => setNuevoSeguimiento({ ...nuevoSeguimiento, proximo_seguimiento: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarFormBitacora(false)}
+                                    className="bg-[#2D2845] hover:bg-[#3D375B] text-gray-300 text-xs px-4 py-2 rounded-lg font-bold transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={guardandoBitacora}
+                                    className="bg-[#A855F7] hover:bg-[#9333EA] text-white text-xs px-4 py-2 rounded-lg font-bold transition-all shadow-md shadow-[#A855F7]/30"
+                                >
+                                    {guardandoBitacora ? "Guardando..." : "Guardar Registro"}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    {/* Lista de Registros de Bitácora */}
+                    <div className="space-y-4">
+                        {bitacora.length > 0 ? (
+                            bitacora.map((item, index) => (
+                                <div key={item.id || index} className="bg-[#0B0A0F] border border-[#2D2845] p-4 rounded-xl border-l-4 border-l-[#A855F7]">
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3 pb-2 border-b border-[#2D2845]/50">
+                                        <span className="text-xs font-bold text-[#A855F7] flex items-center gap-1.5">
+                                            <Calendar size={13} /> {new Date(item.fecha_seguimiento).toLocaleDateString()}
+                                        </span>
+                                        <span className="text-[11px] bg-[#13111C] text-gray-300 px-2.5 py-1 rounded-md border border-[#2D2845]">
+                                            👤 Resp: <strong className="text-white">{item.responsable_pendientes || "No asignado"}</strong>
+                                        </span>
+                                    </div>
+
+                                    <div className="mb-3">
+                                        <h5 className="text-[11px] text-gray-400 uppercase font-bold mb-1">Detalle del Seguimiento</h5>
+                                        <p className="text-xs text-gray-200 leading-relaxed bg-[#13111C]/50 p-3 rounded-lg border border-[#2D2845]/40">
+                                            {item.detalle_seguimiento}
+                                        </p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                        {item.temas_pendientes && (
+                                            <div className="bg-[#13111C]/40 p-2.5 rounded-lg border border-[#2D2845]/40">
+                                                <span className="block font-bold text-amber-400 mb-0.5 text-[10px] uppercase">Temas Pendientes</span>
+                                                <span className="text-gray-300">{item.temas_pendientes}</span>
+                                            </div>
+                                        )}
+                                        {item.proximo_seguimiento && (
+                                            <div className="bg-[#13111C]/40 p-2.5 rounded-lg border border-[#2D2845]/40">
+                                                <span className="block font-bold text-[#22C55E] mb-0.5 text-[10px] uppercase">Próximos Seguimientos</span>
+                                                <span className="text-gray-300">{item.proximo_seguimiento}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-xs text-gray-500 text-center py-6 bg-[#0B0A0F] rounded-xl border border-[#2D2845]">
+                                No hay seguimientos registrados en la bitácora todavía.
+                            </p>
+                        )}
+                    </div>
+                </div>
+
                 {/* Grid con Campos */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
@@ -243,6 +434,26 @@ const DetalleProyecto = () => {
                             />
                         ) : (
                             <span className="text-sm font-semibold text-white">{proyecto.lider_proyecto || "No asignado"}</span>
+                        )}
+                    </div>
+
+                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
+                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
+                            <User size={12} /> Project Manager a cargo
+                        </span>
+                        {isEditing ? (
+                            <input
+                                type="text"
+                                name="project_manager"
+                                value={formData.project_manager || ""}
+                                onChange={handleChange}
+                                placeholder="Ej. Nombre del PM"
+                                className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
+                            />
+                        ) : (
+                            <span className="text-sm font-semibold text-purple-300">
+                                {proyecto.project_manager || "Sin asignar"}
+                            </span>
                         )}
                     </div>
 

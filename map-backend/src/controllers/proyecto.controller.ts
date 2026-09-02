@@ -66,12 +66,10 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
 };
 
 // GET ALL
-// En getProyectos (o la función que lista los proyectos para las tarjetas):
 export const getProyectos = async (req: Request, res: Response): Promise<void> => {
   try {
     const proyectos = await prisma.proyecto.findMany();
     
-    // Traemos directamente todas las evaluaciones multicriterio por SQL
     let evaluaciones: any[] = [];
     try {
       evaluaciones = await prisma.$queryRaw`SELECT * FROM evaluacion_multicriterio` as any[];
@@ -80,12 +78,10 @@ export const getProyectos = async (req: Request, res: Response): Promise<void> =
     }
 
     const resultado = proyectos.map((p: any) => {
-      // Buscamos la evaluación que corresponda al id del proyecto
       const evalMC = evaluaciones.find((e: any) => String(e.proyecto_id) === String(p.id));
       
       return {
         ...p,
-        // Forzamos la lectura del puntaje global y aseguramos que no sea undefined
         puntaje_global: evalMC ? evalMC.puntaje_global : (p.puntaje_global ?? null),
       };
     });
@@ -128,7 +124,6 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
 
 // CREATE
 export const crearProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
-  // Captura robusta del ID de usuario compatible con .id, .userId o .sub
   const idUsuarioAccion = req.usuario?.id 
     ? Number(req.usuario.id) 
     : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
@@ -177,6 +172,7 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
         ]
       });
 
+      // Incluye explícitamente el ID de la iniciativa recién creada
       await tx.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
@@ -248,6 +244,7 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
         },
       });
 
+      // Incluye explícitamente el ID del proyecto evaluado
       await tx.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
@@ -276,6 +273,11 @@ export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: R
 // UPDATE
 export const updateProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
+  
+  const idUsuarioAccion = req.usuario?.id 
+    ? Number(req.usuario.id) 
+    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
+
   try {
     const { 
       id: _id, 
@@ -310,9 +312,35 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       dataToUpdate.costo_real = Number(costo_real);
     } 
 
-    const proyectoActualizado = await prisma.proyecto.update({
-      where: { id },
-      data: dataToUpdate,
+    const proyectoActualizado = await prisma.$transaction(async (tx) => {
+      const proyectoAnterior = await tx.proyecto.findUnique({
+        where: { id },
+        select: { project_manager: true }
+      });
+
+      const proyecto = await tx.proyecto.update({
+        where: { id },
+        data: dataToUpdate,
+      });
+
+      if (
+        dataToUpdate.project_manager !== undefined && 
+        dataToUpdate.project_manager !== proyectoAnterior?.project_manager
+      ) {
+        // Incluye explícitamente el ID del proyecto actualizado
+        await tx.logs_auditoria.create({
+          data: {
+            id_usuario_accion: idUsuarioAccion,
+            id_proyecto: id,
+            campo_modificado: 'project_manager',
+            valor_anterior: proyectoAnterior?.project_manager || 'Sin Asignar',
+            valor_nuevo: dataToUpdate.project_manager || 'Sin Asignar',
+            fecha_transaccion: new Date(),
+          },
+        });
+      }
+
+      return proyecto;
     });
 
     res.status(200).json({ success: true, data: proyectoActualizado });
@@ -362,6 +390,7 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
     });
 
     try {
+      // Incluye explícitamente el ID de la iniciativa cuyo estado cambió
       await prisma.logs_auditoria.create({
         data: {
           id_usuario_accion: idUsuarioAccion,
@@ -392,22 +421,97 @@ export const actualizarEstadoIniciativa = async (req: AuthRequest, res: Response
   }
 };
 
-// OBTENER LOGS DE AUDITORÍA UNIFICADOS
+// OBTENER LOGS DE AUDITORÍA UNIFICADOS CON DATOS DEL PROYECTO
 export const getLogsAuditoria = async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const logs = await prisma.logs_auditoria.findMany({
       include: {
-        usuarios: { select: { correo: true } }
+        usuarios: { select: { correo: true } },
       },
       orderBy: { fecha_transaccion: 'desc' }
     });
 
+    // Traemos todos los proyectos para relacionarlos de manera limpia
+    const proyectos = await prisma.proyecto.findMany({
+      select: { id: true, codigo: true, nombre: true }
+    });
+
+    const logsConProyecto = logs.map(log => {
+      const proyectoEncontrado = proyectos.find(p => p.id === log.id_proyecto);
+      return {
+        ...log,
+        // Adjuntamos el objeto proyecto formateado para usarlo fácilmente en el frontend
+        proyecto: proyectoEncontrado ? { codigo: proyectoEncontrado.codigo, nombre: proyectoEncontrado.nombre } : null,
+        proyecto_info: proyectoEncontrado ? `${proyectoEncontrado.codigo} - ${proyectoEncontrado.nombre}` : 'GLOBAL'
+      };
+    });
+
     res.json({
       success: true,
-      data: logs
+      data: logsConProyecto
     });
   } catch (error) {
     console.error("Error al obtener auditoría:", error);
     res.status(500).json({ success: false, message: 'Error al obtener los registros de auditoría.' });
+  }
+};
+
+// AGREGAR REGISTRO DE BITÁCORA Y AUDITORÍA
+export const agregarSeguimiento = async (req: AuthRequest, res: Response): Promise<void> => {
+  const idProyecto = String(req.params.id);
+  const idUsuarioAccion = req.usuario?.id 
+    ? Number(req.usuario.id) 
+    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
+
+  try {
+    const { fecha_seguimiento, detalle_seguimiento, proximo_seguimiento, temas_pendientes, responsable_pendientes } = req.body;
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      // 1. Guardar en la bitácora
+      const nuevoSeguimiento = await (tx as any).bitacora_seguimiento.create({
+        data: {
+          proyecto_id: idProyecto,
+          fecha_seguimiento: fecha_seguimiento ? new Date(fecha_seguimiento) : new Date(),
+          detalle_seguimiento,
+          proximo_seguimiento,
+          temas_pendientes,
+          responsable_pendientes,
+          creado_por: idUsuarioAccion
+        }
+      });
+
+      // 2. Registrar en la auditoría unificada incluyendo el ID de la iniciativa/proyecto
+      await tx.logs_auditoria.create({
+        data: {
+          id_usuario_accion: idUsuarioAccion,
+          id_proyecto: idProyecto, // <-- ID de la iniciativa vinculado correctamente
+          campo_modificado: 'nuevo_seguimiento_bitacora',
+          valor_anterior: 'Sin registro previo',
+          valor_nuevo: `Seguimiento añadido: ${(detalle_seguimiento || '').substring(0, 100)}`,
+          fecha_transaccion: new Date()
+        }
+      });
+
+      return nuevoSeguimiento;
+    });
+
+    res.status(201).json({ success: true, data: resultado });
+  } catch (error: any) {
+    console.error('❌ Error al agregar seguimiento:', error);
+    res.status(500).json({ success: false, message: 'Error al agregar seguimiento', error: error.message });
+  }
+};
+
+// OBTENER LA BITÁCORA DE UN PROYECTO
+export const getBitacoraProyecto = async (req: Request, res: Response): Promise<void> => {
+  const idProyecto = String(req.params.id);
+  try {
+    const bitacora = await (prisma as any).bitacora_seguimiento.findMany({
+      where: { proyecto_id: idProyecto },
+      orderBy: { fecha_seguimiento: 'desc' }
+    });
+    res.status(200).json({ success: true, data: bitacora });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: 'Error al obtener bitácora', error: error.message });
   }
 };

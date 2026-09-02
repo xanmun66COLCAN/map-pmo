@@ -360,6 +360,7 @@ const VistaAdministracion = () => {
                 <thead className="bg-[#0B0A0F] text-gray-400 uppercase text-[10px] tracking-wider border-b border-[#2D2845]">
                   <tr>
                     <th className="py-3 px-4">ID Log</th>
+                    <th className="py-3 px-4">Proyecto / Iniciativa</th> {/* 👈 COLUMNA DE CÓDIGO */}
                     <th className="py-3 px-4">Acción / Tipo</th>
                     <th className="py-3 px-4">Detalle del Cambio</th>
                     <th className="py-3 px-4">Responsable</th>
@@ -377,6 +378,19 @@ const VistaAdministracion = () => {
                         <tr key={log.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
                           <td className="py-3 px-4 font-mono text-purple-400">#{log.id}</td>
                           
+                          {/* 👈 CELDA PARA MOSTRAR EL CÓDIGO O 'GLOBAL' */}
+                          <td className="py-3 px-4 font-mono">
+                            {esProyecto && log.proyecto?.codigo ? (
+                              <span className="px-2.5 py-1 bg-purple-500/15 text-purple-300 border border-purple-500/30 rounded text-[10px] font-bold" title={log.proyecto_info}>
+                                {log.proyecto.codigo}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 bg-gray-800/60 text-gray-400 border border-gray-700/50 rounded text-[10px] font-semibold">
+                                GLOBAL
+                              </span>
+                            )}
+                          </td>
+
                           {/* Badge del tipo de evento */}
                           <td className="py-3 px-4">
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
@@ -395,9 +409,6 @@ const VistaAdministracion = () => {
                                 <span className="text-rose-400 font-mono">{log.valor_anterior || 'N/A'}</span>
                                 <span className="text-gray-500 mx-2">➔</span>
                                 <span className="text-emerald-400 font-mono">{log.valor_nuevo || 'N/A'}</span>
-                                <div className="text-[10px] text-gray-500 font-mono mt-0.5">
-                                  Proyecto modificado exitosamente (Ref: {log.id_proyecto.substring(0, 8)}...)
-                                </div>
                               </>
                             ) : (
                               <span className="text-gray-200">{log.valor_nuevo || 'Sin detalles'}</span>
@@ -418,7 +429,7 @@ const VistaAdministracion = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="5" className="text-center py-8 text-gray-400">
+                      <td colSpan="6" className="text-center py-8 text-gray-400">
                         No hay registros de auditoría almacenados.
                       </td>
                     </tr>

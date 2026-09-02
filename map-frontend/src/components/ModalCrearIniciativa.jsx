@@ -1,3 +1,4 @@
+// src/components/ModalCrearIniciativa.jsx
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axiosInstance';
@@ -10,14 +11,14 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
     descripcion: '',
     area: 'Tecnología',
     prioridad: 'MEDIA',
-    estado: 'Caso_de_Negocio', // Estado inicial por defecto
+    estado: 'Caso_de_Negocio',
     presupuesto_estimado: '',
+    project_manager: '', // Añadido para el PM Operativo
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Si el modal está cerrado, no se renderiza nada en el DOM
   if (!isOpen) return null;
 
   const handleChange = (e) => {
@@ -37,18 +38,18 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
       const payload = {
         nombre: formData.nombre,
         descripcion: formData.descripcion,
-        departamento: formData.area, // Mapeamos 'area' del formulario al campo 'departamento' de Prisma
+        departamento: formData.area,
         prioridad: formData.prioridad,
-        estado: formData.estado, // Enviamos el estado seleccionado
+        estado: formData.estado,
         solicitante_id: user?.id,
         presupuesto_estimado: formData.presupuesto_estimado
           ? Number(formData.presupuesto_estimado)
           : 0,
+        project_manager: formData.project_manager || null, // Enviamos el PM operativo
       };
 
       await api.post('/proyectos', payload);
 
-      // Reiniciar el formulario
       setFormData({
         nombre: '',
         descripcion: '',
@@ -56,9 +57,9 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
         prioridad: 'MEDIA',
         estado: 'Caso_de_Negocio',
         presupuesto_estimado: '',
+        project_manager: '',
       });
 
-      // Notificar al padre para recargar la lista y cerrar
       onSuccess();
       onClose();
     } catch (err) {
@@ -172,19 +173,35 @@ export default function ModalCrearIniciativa({ isOpen, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Presupuesto Estimado */}
-          <div>
-            <label className="block text-sm font-medium text-[#CBD5E1] mb-1">
-              Presupuesto Estimado
-            </label>
-            <input
-              type="number"
-              name="presupuesto_estimado"
-              value={formData.presupuesto_estimado}
-              onChange={handleChange}
-              placeholder="0.00"
-              className="w-full bg-[#1A1726] border border-[#2D2845] text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-[#A855F7]"
-            />
+          {/* Presupuesto y Project Manager Operativo */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-[#CBD5E1] mb-1">
+                Presupuesto Estimado
+              </label>
+              <input
+                type="number"
+                name="presupuesto_estimado"
+                value={formData.presupuesto_estimado}
+                onChange={handleChange}
+                placeholder="0.00"
+                className="w-full bg-[#1A1726] border border-[#2D2845] text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-[#A855F7]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#CBD5E1] mb-1">
+                Project Manager (PM Operativo)
+              </label>
+              <input
+                type="text"
+                name="project_manager"
+                value={formData.project_manager}
+                onChange={handleChange}
+                placeholder="Ej: Ing. Fredy Muñoz"
+                className="w-full bg-[#1A1726] border border-[#2D2845] text-white text-sm rounded-lg p-2.5 focus:outline-none focus:border-[#A855F7]"
+              />
+            </div>
           </div>
 
           {/* Descripción */}

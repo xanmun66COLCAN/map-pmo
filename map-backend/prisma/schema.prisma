@@ -8,49 +8,68 @@ datasource db {
 }
 
 model Usuario {
-  id               Int                  @id @default(autoincrement())
-  nombre           String               @db.VarChar(100)
-  contrasena       String               @db.VarChar(255)
-  correo           String               @unique @db.VarChar(100)
-  fecha_creacion   DateTime?            @default(now()) @db.Timestamp(6)
-  id_rol           Int?
-  asignaciones     AsignacionRecurso[]
-  logs_auditoria   logs_auditoria[]
-  roles            roles?               @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  id             Int                  @id @default(autoincrement())
+  nombre         String               @db.VarChar(100)
+  contrasena     String               @db.VarChar(255)
+  correo         String               @unique @db.VarChar(100)
+  fecha_creacion DateTime?            @default(now()) @db.Timestamp(6)
+  id_rol         Int?
+  asignaciones   AsignacionRecurso[]
+  logs_auditoria logs_auditoria[]
+  roles          roles?               @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  bitacoras      bitacora_seguimiento[]
 
   @@map("usuarios")
 }
 
 model Proyecto {
-  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  codigo              String               @unique @db.VarChar(20)
-  nombre              String               @db.VarChar(150)
-  descripcion         String?
-  estado              estado_proyecto_enum @default(Caso_de_Negocio)
-  departamento        String               @db.VarChar(100)
-  lider_proyecto      String               @db.VarChar(100)
-  presupuesto         Decimal              @default(0.00) @db.Decimal(12, 2)
-  costo_real          Decimal              @default(0.00) @db.Decimal(12, 2)
-  porcentaje_avance   Int                  @default(0)
-  fecha_inicio        DateTime             @db.Date
-  fecha_fin           DateTime             @db.Date
-  
-  // ⚖️ Nuevos campos para la Calificación Multicriterio
-  beneficio           Int                  @default(5) // Peso: 30%
-  costo               Int                  @default(5) // Peso: 25% (Inverso)
-  riesgo              Int                  @default(5) // Peso: 20% (Inverso)
-  alineacion          Int                  @default(5) // Peso: 25%
-  puntaje_global      Decimal              @default(5.00) @db.Decimal(5, 2)
+  id                String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  codigo            String               @unique @db.VarChar(20)
+  nombre            String               @db.VarChar(150)
+  descripcion       String?
+  estado            estado_proyecto_enum @default(Caso_de_Negocio)
+  departamento      String               @db.VarChar(100)
+  lider_proyecto    String               @db.VarChar(100)
+  project_manager   String?              @db.VarChar(100)
+  presupuesto       Decimal              @default(0.00) @db.Decimal(12, 2)
+  costo_real        Decimal              @default(0.00) @db.Decimal(12, 2)
+  porcentaje_avance Int                  @default(0)
+  fecha_inicio      DateTime             @db.Date
+  fecha_fin         DateTime             @db.Date
+  creado_en         DateTime?            @default(now()) @db.Timestamptz(6)
+  actualizado_en    DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
+  alineacion        Int                  @default(5)
+  beneficio         Int                  @default(5)
+  costo             Int                  @default(5)
+  puntaje_global    Decimal              @default(5.00) @db.Decimal(5, 2)
+  riesgo            Int                  @default(5)
 
-  creado_en           DateTime?            @default(now()) @db.Timestamptz(6)
-  actualizado_en      DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
+  // Relaciones
+  bitacoras         bitacora_seguimiento[]
 
   @@map("proyectos")
 }
 
+model bitacora_seguimiento {
+  id                    Int       @id @default(autoincrement())
+  proyecto_id           String    @db.Uuid
+  fecha_seguimiento     DateTime  @default(now()) @db.Date
+  detalle_seguimiento   String
+  proximo_seguimiento   String?
+  temas_pendientes      String?
+  responsable_pendientes String?  @db.VarChar(100)
+  creado_por            Int?
+  
+  proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario               Usuario?  @relation(fields: [creado_por], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([proyecto_id], map: "idx_bitacora_proyecto")
+  @@map("bitacora_seguimiento")
+}
+
 model AsignacionRecurso {
   id                    Int       @id @default(autoincrement())
-  proyecto_id           String
+  proyecto_id           String    @db.Uuid
   usuario_id            Int
   porcentaje_asignacion Int?      @default(100)
   fecha_desde           DateTime? @db.Date
@@ -66,7 +85,7 @@ model AsignacionRecurso {
 
 model Kpi {
   id            Int                  @id @default(autoincrement())
-  proyecto_id   String
+  proyecto_id   String               @db.Uuid
   nombre_kpi    String               @db.VarChar(100)
   descripcion   String?
   meta_valor    Decimal?             @db.Decimal(10, 2)
@@ -95,19 +114,23 @@ model HistorialKpi {
 
 model logs_auditoria {
   id                Int       @id @default(autoincrement())
-  id_proyecto       String?
+  id_proyecto       String?   @db.Uuid
   id_usuario_accion Int?
   campo_modificado  String    @db.VarChar(100)
   valor_anterior    String?   @db.VarChar(255)
   valor_nuevo       String?   @db.VarChar(255)
   fecha_transaccion DateTime? @default(now()) @db.Timestamp(6)
   usuarios          Usuario?  @relation(fields: [id_usuario_accion], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("logs_auditoria")
 }
 
 model roles {
   id         Int       @id @default(autoincrement())
   nombre_rol String    @unique @db.VarChar(50)
   usuarios   Usuario[]
+
+  @@map("roles")
 }
 
 enum estado_proyecto_enum {

@@ -8,7 +8,9 @@ import {
   deleteProyecto,
   actualizarEstadoIniciativa,
   getLogsAuditoria,
-  actualizarEvaluacionMulticriterio
+  actualizarEvaluacionMulticriterio,
+  agregarSeguimiento,     // 👈 Nuevo controlador de bitácora
+  getBitacoraProyecto     // 👈 Nuevo controlador de bitácora
 } from '../controllers/proyecto.controller'; 
 import verificarToken from '../middlewares/auth.middleware';
 
@@ -20,28 +22,30 @@ router.use(verificarToken);
 // 1. Dashboard (debe ir antes de /:id)
 router.get('/dashboard', getProyectosDashboard);
 
-// 2. Listar todos los proyectos
-router.get('/', getProyectos);
-
-// 3. Crear proyecto
-router.post('/', crearProyecto);
-
-// 4. Ruta para la auditoría
+// 2. Ruta para la auditoría (debe ir antes de /:id para evitar conflictos)
 router.get('/auditoria/logs', getLogsAuditoria);
 
-// 5. MOVER AQUÍ: Las rutas específicas con subniveles van ANTES de /:id
-router.patch('/:id/estado', actualizarEstadoIniciativa);
+// 3. Listar todos los proyectos
+router.get('/', getProyectos);
 
-// 6. Nueva ruta para la Calificación Multicriterio
+// 4. Crear proyecto
+router.post('/', crearProyecto);
+
+// 5. Rutas específicas con subniveles (van ANTES de /:id)
+router.patch('/:id/estado', actualizarEstadoIniciativa);
 router.put('/:id/evaluacion', actualizarEvaluacionMulticriterio);
 
-// 7. Obtener proyecto específico por ID
+// 📌 Rutas de Bitácora de Seguimiento Ejecutivo
+router.get('/:id/bitacora', getBitacoraProyecto);     // Obtener historial de bitácora
+router.post('/:id/bitacora', agregarSeguimiento);    // Crear un nuevo registro en la bitácora
+
+// 6. Obtener proyecto específico por ID
 router.get('/:id', getProyectoById);
 
-// 8. Actualizar proyecto completo por ID
+// 7. Actualizar proyecto completo por ID
 router.put('/:id', updateProyecto);
 
-// 9. Eliminar proyecto por ID
+// 8. Eliminar proyecto por ID
 router.delete('/:id', deleteProyecto);
 
 export default router;

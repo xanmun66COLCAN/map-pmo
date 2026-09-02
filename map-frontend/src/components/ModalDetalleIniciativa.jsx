@@ -1,6 +1,6 @@
 // src/components/ModalDetalleIniciativa.jsx
 import React, { useState, useEffect } from 'react';
-import { Edit3, Save, X, Calendar, User, Tag, DollarSign, Briefcase } from 'lucide-react';
+import { Edit3, Save, X, Calendar, User, Tag, DollarSign, Briefcase, ShieldCheck } from 'lucide-react';
 
 export default function ModalDetalleIniciativa({ iniciativa, onClose, onAprobar, onRechazar, onUpdate, esAdminOLider }) {
   // Estado local para manejar la edición y los datos del formulario
@@ -102,36 +102,93 @@ export default function ModalDetalleIniciativa({ iniciativa, onClose, onAprobar,
               )}
             </div>
 
-            {/* Solicitante */}
+            {/* Solicitante / Sponsor */}
             <div>
-              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Solicitante</span>
+              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Líder / Sponsor</span>
               <div className="flex items-center gap-1.5 text-sm font-medium text-white">
                 <User className="w-3.5 h-3.5 text-[#22C55E]" />
-                <span className="truncate">{formData.solicitante?.nombre || formData.nombre_solicitante || 'N/A'}</span>
+                <span className="truncate">{formData.lider_proyecto || formData.solicitante?.nombre || 'N/A'}</span>
               </div>
+            </div>
+
+            {/* Project Manager Operativo */}
+            <div>
+              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">PM Operativo</span>
+              {isEditing ? (
+                <input 
+                  type="text" 
+                  name="project_manager" 
+                  value={formData.project_manager || ''} 
+                  onChange={handleChange}
+                  placeholder="Asignar PM..."
+                  className="w-full bg-[#13111C] border border-purple-500/40 rounded px-2 py-1 text-xs text-white"
+                />
+              ) : (
+                <div className="flex items-center gap-1.5 text-sm font-medium text-purple-300">
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="truncate">{formData.project_manager || 'Sin asignar'}</span>
+                </div>
+              )}
             </div>
 
             {/* Área */}
             <div>
-              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Área / Departamento</span>
+              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Área / Depto</span>
               {isEditing ? (
                 <input 
                   type="text" 
                   name="area" 
-                  value={formData.area || ''} 
+                  value={formData.area || formData.departamento || ''} 
                   onChange={handleChange}
                   className="w-full bg-[#13111C] border border-purple-500/40 rounded px-2 py-1 text-xs text-white"
                 />
               ) : (
                 <div className="flex items-center gap-1.5 text-sm font-medium text-white">
                   <Briefcase className="w-3.5 h-3.5 text-purple-400" />
-                  <span className="truncate">{formData.area || 'General'}</span>
+                  <span className="truncate">{formData.area || formData.departamento || 'General'}</span>
                 </div>
               )}
             </div>
 
+          </div>
+
+          {/* Segunda Fila de Campos Detallados */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* Presupuesto */}
+            <div className="bg-[#1A1726] p-4 rounded-xl border border-[#2D2845]">
+              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Presupuesto Estimado</span>
+              {isEditing ? (
+                <input 
+                  type="number" 
+                  name="presupuesto_estimado" 
+                  value={formData.presupuesto_estimado || formData.presupuesto || ''} 
+                  onChange={handleChange}
+                  className="w-full bg-[#13111C] border border-purple-500/40 rounded px-2 py-1 text-sm text-white"
+                />
+              ) : (
+                <div className="flex items-center gap-1.5 text-base font-bold text-[#22C55E]">
+                  <DollarSign className="w-4 h-4" />
+                  <span>
+                    {(formData.presupuesto_estimado || formData.presupuesto)
+                      ? `$${Number(formData.presupuesto_estimado || formData.presupuesto).toLocaleString('es-CO')}`
+                      : 'Sin presupuesto asignado'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Fecha de Creación / Registro */}
+            <div className="bg-[#1A1726] p-4 rounded-xl border border-[#2D2845]">
+              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Fecha de Registro</span>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
+                <Calendar className="w-4 h-4 text-purple-400" />
+                <span>{formData.fecha_creacion || formData.created_at || 'N/A'}</span>
+              </div>
+            </div>
+
             {/* Prioridad */}
-            <div>
+            <div className="bg-[#1A1726] p-4 rounded-xl border border-[#2D2845]">
               <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Prioridad</span>
               {isEditing ? (
                 <select 
@@ -149,52 +206,6 @@ export default function ModalDetalleIniciativa({ iniciativa, onClose, onAprobar,
                   {formData.prioridad || 'MEDIA'}
                 </span>
               )}
-            </div>
-
-          </div>
-
-          {/* Segunda Fila de Campos Detallados */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            
-            {/* Presupuesto */}
-            <div className="bg-[#1A1726] p-4 rounded-xl border border-[#2D2845]">
-              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Presupuesto Estimado</span>
-              {isEditing ? (
-                <input 
-                  type="number" 
-                  name="presupuesto_estimado" 
-                  value={formData.presupuesto_estimado || ''} 
-                  onChange={handleChange}
-                  className="w-full bg-[#13111C] border border-purple-500/40 rounded px-2 py-1 text-sm text-white"
-                />
-              ) : (
-                <div className="flex items-center gap-1.5 text-base font-bold text-[#22C55E]">
-                  <DollarSign className="w-4 h-4" />
-                  <span>
-                    {formData.presupuesto_estimado
-                      ? `$${Number(formData.presupuesto_estimado).toLocaleString('es-CO')}`
-                      : 'Sin presupuesto asignado'}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Fecha de Creación / Registro */}
-            <div className="bg-[#1A1726] p-4 rounded-xl border border-[#2D2845]">
-              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Fecha de Registro</span>
-              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
-                <Calendar className="w-4 h-4 text-purple-400" />
-                <span>{formData.fecha_creacion || formData.created_at || 'N/A'}</span>
-              </div>
-            </div>
-
-            {/* Categoría / Tipo */}
-            <div className="bg-[#1A1726] p-4 rounded-xl border border-[#2D2845]">
-              <span className="block text-[10px] uppercase font-semibold text-[#64748B] mb-1">Categoría / Tipo</span>
-              <div className="flex items-center gap-1.5 text-sm font-medium text-gray-300">
-                <Tag className="w-4 h-4 text-[#22C55E]" />
-                <span>{formData.categoria || 'Proyecto Estratégico'}</span>
-              </div>
             </div>
 
           </div>
