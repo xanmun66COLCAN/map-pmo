@@ -3,8 +3,8 @@ import { UserPlus, ShieldCheck, FileText, Users, AlertCircle, CheckCircle2 } fro
 import api from '../api/axiosInstance'; // 👈 Instancia centralizada con interceptores
 
 const VistaAdministracion = () => {
-  // Estados para la pestaña activa ('usuarios', 'gestion', 'auditoria')
-  const [tabActiva, setTabActiva] = useState('usuarios');
+  // 👇 Cambiamos el estado inicial de 'usuarios' a 'auditoria' para que abra por defecto
+  const [tabActiva, setTabActiva] = useState('auditoria');
 
   // Estados del formulario de creación de usuario
   const [formData, setFormData] = useState({
@@ -28,7 +28,7 @@ const VistaAdministracion = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState(null);
 
-  // Cargar datos al cambiar de pestaña
+  // Cargar datos al cambiar de pestaña (y como 'auditoria' es la inicial, ejecutará esta lógica al montar si es necesario)
   useEffect(() => {
     if (tabActiva === 'gestion') {
       obtenerUsuariosActivos();
@@ -116,6 +116,19 @@ const VistaAdministracion = () => {
 
         {/* Pestañas de Navegación Interna */}
         <div className="flex bg-[#13111C] p-1 rounded-xl border border-[#2D2845] gap-1">
+          
+          <button
+            onClick={() => setTabActiva('auditoria')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
+              tabActiva === 'auditoria'
+                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Auditoría</span>
+          </button>
+
           <button
             onClick={() => setTabActiva('usuarios')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
@@ -140,17 +153,6 @@ const VistaAdministracion = () => {
             <span>Gestión de Roles</span>
           </button>
 
-          <button
-            onClick={() => setTabActiva('auditoria')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
-              tabActiva === 'auditoria'
-                ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Auditoría</span>
-          </button>
         </div>
       </div>
 
@@ -360,7 +362,7 @@ const VistaAdministracion = () => {
                 <thead className="bg-[#0B0A0F] text-gray-400 uppercase text-[10px] tracking-wider border-b border-[#2D2845]">
                   <tr>
                     <th className="py-3 px-4">ID Log</th>
-                    <th className="py-3 px-4">Proyecto / Iniciativa</th> {/* 👈 COLUMNA DE CÓDIGO */}
+                    <th className="py-3 px-4">Proyecto / Iniciativa</th>
                     <th className="py-3 px-4">Acción / Tipo</th>
                     <th className="py-3 px-4">Detalle del Cambio</th>
                     <th className="py-3 px-4">Responsable</th>
@@ -378,7 +380,6 @@ const VistaAdministracion = () => {
                         <tr key={log.id} className="hover:bg-[#0B0A0F]/40 transition-colors">
                           <td className="py-3 px-4 font-mono text-purple-400">#{log.id}</td>
                           
-                          {/* 👈 CELDA PARA MOSTRAR EL CÓDIGO O 'GLOBAL' */}
                           <td className="py-3 px-4 font-mono">
                             {esProyecto && log.proyecto?.codigo ? (
                               <span className="px-2.5 py-1 bg-purple-500/15 text-purple-300 border border-purple-500/30 rounded text-[10px] font-bold" title={log.proyecto_info}>
@@ -391,7 +392,6 @@ const VistaAdministracion = () => {
                             )}
                           </td>
 
-                          {/* Badge del tipo de evento */}
                           <td className="py-3 px-4">
                             <span className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
                               esLogin ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
@@ -402,7 +402,6 @@ const VistaAdministracion = () => {
                             </span>
                           </td>
 
-                          {/* Detalles / Cambio de Valores */}
                           <td className="py-3 px-4 text-gray-300">
                             {esProyecto ? (
                               <>
@@ -415,12 +414,10 @@ const VistaAdministracion = () => {
                             )}
                           </td>
 
-                          {/* Responsable */}
                           <td className="py-3 px-4 text-purple-300 font-medium">
                             {log.usuarios?.correo || `Usuario ID: ${log.id_usuario_accion || 'Sistema'}`}
                           </td>
 
-                          {/* Fecha y Hora */}
                           <td className="py-3 px-4 font-mono text-gray-400">
                             {log.fecha_transaccion ? new Date(log.fecha_transaccion).toLocaleString() : 'N/A'}
                           </td>

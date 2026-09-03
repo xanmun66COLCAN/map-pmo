@@ -367,14 +367,13 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       creado_en: _creado_en, 
       actualizado_en: _actualizado_en, 
       estado: _estado, 
-      porcentaje_avance: _porcentaje_avance, 
+      porcentaje_avance: _porcentaje_avance, // 👈 Se descarta cualquier intento de envío manual desde el cliente
       solicitante, 
       fecha_inicio, 
       fecha_fin, 
       presupuesto, 
       costo_real, 
       puntaje_global, 
-      // 👇 Filtramos también los campos calculados que vienen del cliente para que Prisma no falle
       alerta_desviacion_negativa,
       diferencia_presupuesto,
       mensaje_desviacion,
@@ -402,34 +401,62 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
     } 
 
     const proyectoActualizado = await prisma.$transaction(async (tx) => {
+      // 1. Traemos el proyecto anterior completo para comparar
       const proyectoAnterior = await tx.proyecto.findUnique({
         where: { id },
-        select: { project_manager: true, fecha_inicio: true, fecha_fin: true, estado: true }
-      } as any) as any;
+      });
 
+      // 2. CÁLCULO AUTOMÁTICO OBLIGATORIO DEL AVANCE BASADO EN FECHAS Y ESTADO ACTUAL
       const fInicio = dataToUpdate.fecha_inicio || proyectoAnterior?.fecha_inicio;
       const fFin = dataToUpdate.fecha_fin || proyectoAnterior?.fecha_fin;
-      dataToUpdate.porcentaje_avance = calcularAvanceAutomatico(fInicio, fFin, proyectoAnterior?.estado || 'En_Proceso');
+      const estadoActualProyecto = proyectoAnterior?.estado || 'En_Proceso';
+      
+      const nuevoPorcentajeCalculado = calcularAvanceAutomatico(fInicio, fFin, estadoActualProyecto);
+      
+      // Forzamos que el porcentaje a actualizar en base de datos sea estrictamente el calculado
+      dataToUpdate.porcentaje_avance = nuevoPorcentajeCalculado;
 
       const proyecto = await tx.proyecto.update({
         where: { id },
         data: dataToUpdate,
       });
 
-      if (
-        dataToUpdate.project_manager !== undefined && 
-        dataToUpdate.project_manager !== proyectoAnterior?.project_manager
-      ) {
-        await tx.logs_auditoria.create({
-          data: {
-            id_usuario_accion: idUsuarioAccion,
-            id_proyecto: id,
-            campo_modificado: 'project_manager',
-            valor_anterior: proyectoAnterior?.project_manager || 'Sin Asignar',
-            valor_nuevo: dataToUpdate.project_manager || 'Sin Asignar',
-            fecha_transaccion: new Date(),
-          },
-        });
+      // 3. Lista de campos a auditar (añadimos fecha_inicio y fecha_fin)
+      const camposAulitar = [
+        { key: 'project_manager', label: 'Project Manager' },
+        { key: 'lider_proyecto', label: 'Líder del Proyecto' },
+        { key: 'departamento', label: 'Departamento' },
+        { key: 'presupuesto', label: 'Presupuesto' },
+        { key: 'costo_real', label: 'Costo Real' },
+        { key: 'estado', label: 'Estado' },
+        { key: 'porcentaje_avance', label: 'Porcentaje de Avance' },
+        { key: 'fecha_inicio', label: 'Fecha de Inicio' },
+        { key: 'fecha_fin', label: 'Fecha de Fin' }
+      ];
+
+      // 4. Registrar en auditoría los cambios detectados campo por campo
+      for (const campo of camposAulitar) {
+        let valorAnterior = (proyectoAnterior as any)?.[campo.key];
+        let valorNuevo = dataToUpdate[campo.key];
+
+        // Formatear fechas a string 'YYYY-MM-DD' para una comparación y lectura limpia en el log
+        if (campo.key === 'fecha_inicio' || campo.key === 'fecha_fin') {
+          valorAnterior = valorAnterior ? new Date(valorAnterior).toISOString().split('T')[0] : null;
+          valorNuevo = valorNuevo ? new Date(valorNuevo).toISOString().split('T')[0] : null;
+        }
+
+        if (valorNuevo !== undefined && String(valorNuevo) !== String(valorAnterior)) {
+          await tx.logs_auditoria.create({
+            data: {
+              id_usuario_accion: idUsuarioAccion,
+              id_proyecto: id,
+              campo_modificado: campo.key,
+              valor_anterior: valorAnterior !== null && valorAnterior !== undefined ? String(valorAnterior) : 'Sin Asignar',
+              valor_nuevo: valorNuevo !== null && valorNuevo !== undefined ? String(valorNuevo) : 'Sin Asignar',
+              fecha_transaccion: new Date(),
+            },
+          });
+        }
       }
 
       return proyecto;

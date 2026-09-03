@@ -505,34 +505,6 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Porcentaje de Avance */}
-                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
-                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
-                            <TrendingUp size={12} /> Porcentaje de Avance (%)
-                        </span>
-                        {isEditing ? (
-                            <input
-                                type="number"
-                                min="0"
-                                max="100"
-                                name="porcentaje_avance"
-                                value={formData.porcentaje_avance ?? 0}
-                                onChange={handleChange}
-                                className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
-                            />
-                        ) : (
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1 bg-[#0B0A0F] h-2 rounded-full overflow-hidden border border-[#2D2845]">
-                                    <div 
-                                        className="bg-purple-500 h-full rounded-full transition-all duration-500" 
-                                        style={{ width: `${proyecto.porcentaje_avance || 0}%` }}
-                                    ></div>
-                                </div>
-                                <span className="text-sm font-bold text-purple-300">{proyecto.porcentaje_avance || 0}%</span>
-                            </div>
-                        )}
-                    </div>
-
                     {/* Fecha de Inicio */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
@@ -571,6 +543,30 @@ const DetalleProyecto = () => {
                                 {proyecto.fecha_fin ? new Date(proyecto.fecha_fin).toLocaleDateString() : "No definida"}
                             </span>
                         )}
+                    </div>
+
+                    {/* Porcentaje de Avance (%) - Ahora Calculado Automáticamente */}
+                    <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
+                        <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
+                            <TrendingUp size={12} /> Porcentaje de Avance (%)
+                        </span>
+                        {(() => {
+                            // AQUÍ PUEDES AJUSTAR LA LÓGICA DE CÁLCULO SEGÚN TUS DATOS.
+                            // Por ejemplo, si se calcula en base a entregables o si viene directo del proyecto calculado por el backend:
+                            const avanceCalculado = Number(proyecto.porcentaje_avance || 0); 
+                            
+                            return (
+                                <div className="flex items-center gap-2 mt-1">
+                                    <div className="flex-1 bg-[#0B0A0F] h-2 rounded-full overflow-hidden border border-[#2D2845]">
+                                        <div 
+                                            className="bg-purple-500 h-full rounded-full transition-all duration-500" 
+                                            style={{ width: `${Math.min(Math.max(avanceCalculado, 0), 100)}%` }}
+                                        ></div>
+                                    </div>
+                                    <span className="text-sm font-bold text-purple-300">{Math.round(avanceCalculado)}%</span>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Presupuesto Planificado */}
