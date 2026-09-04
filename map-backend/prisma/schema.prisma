@@ -8,16 +8,17 @@ datasource db {
 }
 
 model Usuario {
-  id             Int                  @id @default(autoincrement())
-  nombre         String               @db.VarChar(100)
-  contrasena     String               @db.VarChar(255)
-  correo         String               @unique @db.VarChar(100)
-  fecha_creacion DateTime?            @default(now()) @db.Timestamp(6)
+  id             Int                    @id @default(autoincrement())
+  nombre         String                 @db.VarChar(100)
+  contrasena     String                 @db.VarChar(255)
+  correo         String                 @unique @db.VarChar(100)
+  fecha_creacion DateTime?              @default(now()) @db.Timestamp(6)
   id_rol         Int?
   asignaciones   AsignacionRecurso[]
   logs_auditoria logs_auditoria[]
-  roles          roles?               @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  roles          roles?                 @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
   bitacoras      bitacora_seguimiento[]
+  Notificacion   Notificacion[]
 
   @@map("usuarios")
 }
@@ -45,23 +46,24 @@ model Proyecto {
   riesgo            Int                  @default(5)
 
   // Relaciones
-  bitacoras         bitacora_seguimiento[]
+  bitacoras bitacora_seguimiento[]
+  Comite    Comite[]
 
   @@map("proyectos")
 }
 
 model bitacora_seguimiento {
-  id                    Int       @id @default(autoincrement())
-  proyecto_id           String    @db.Uuid
-  fecha_seguimiento     DateTime  @default(now()) @db.Date
-  detalle_seguimiento   String
-  proximo_seguimiento   String?
-  temas_pendientes      String?
+  id                     Int      @id @default(autoincrement())
+  proyecto_id            String   @db.Uuid
+  fecha_seguimiento      DateTime @default(now()) @db.Date
+  detalle_seguimiento    String
+  proximo_seguimiento    String?
+  temas_pendientes       String?
   responsable_pendientes String?  @db.VarChar(100)
-  creado_por            Int?
-  
-  proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  usuario               Usuario?  @relation(fields: [creado_por], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  creado_por             Int?
+
+  proyecto Proyecto @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuario  Usuario? @relation(fields: [creado_por], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@index([proyecto_id], map: "idx_bitacora_proyecto")
   @@map("bitacora_seguimiento")
@@ -146,4 +148,32 @@ enum frecuencia_medicion {
   Semanal
   Mensual
   Trimestral
+}
+
+model Comite {
+  id          Int       @id @default(autoincrement())
+  titulo      String    @db.VarChar(150)
+  tipo        String?   @db.VarChar(50)
+  fechaHora   DateTime  @map("fecha_hora")
+  idProyecto  String?   @map("id_proyecto") @db.Uuid
+  descripcion String?   @db.Text
+  creadoEn    DateTime? @default(now()) @map("creado_en")
+
+  proyecto Proyecto? @relation(fields: [idProyecto], references: [id], onDelete: Cascade)
+
+  @@map("comites")
+}
+
+model Notificacion {
+  id        Int       @id @default(autoincrement())
+  idUsuario Int?      @map("id_usuario")
+  titulo    String    @db.VarChar(100)
+  mensaje   String    @db.Text
+  leida     Boolean?  @default(false)
+  tipo      String?   @db.VarChar(50)
+  creadoEn  DateTime? @default(now()) @map("creado_en")
+
+  usuario Usuario? @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+
+  @@map("notificaciones")
 }

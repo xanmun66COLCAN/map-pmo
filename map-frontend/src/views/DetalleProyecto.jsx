@@ -215,7 +215,7 @@ const DetalleProyecto = () => {
                             </h4>
                         </div>
                         <pre className="text-xs text-green-400 bg-[#0B0A0F] p-4 rounded-lg overflow-x-auto max-h-80 border border-[#2D2845]">
-                            {JSON.stringify(formData, null, 2)}
+                            {JSON.stringify(proyecto, null, 2)}
                         </pre>
                     </div>
                 )}
