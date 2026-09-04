@@ -366,8 +366,7 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       codigo: _codigo, 
       creado_en: _creado_en, 
       actualizado_en: _actualizado_en, 
-      estado: _estado, 
-      porcentaje_avance: _porcentaje_avance, // 👈 Se descarta cualquier intento de envío manual desde el cliente
+      porcentaje_avance: _porcentaje_avance, // 👈 'estado' ya NO está aquí, ahora pasará a 'rest'
       solicitante, 
       fecha_inicio, 
       fecha_fin, 
@@ -406,14 +405,16 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
         where: { id },
       });
 
-      // 2. CÁLCULO AUTOMÁTICO OBLIGATORIO DEL AVANCE BASADO EN FECHAS Y ESTADO ACTUAL
+      // 2. Tomamos el nuevo estado si el usuario lo cambió, de lo contrario mantenemos el anterior
+      const estadoActualProyecto = dataToUpdate.estado || proyectoAnterior?.estado || 'En_Proceso';
+      
       const fInicio = dataToUpdate.fecha_inicio || proyectoAnterior?.fecha_inicio;
       const fFin = dataToUpdate.fecha_fin || proyectoAnterior?.fecha_fin;
-      const estadoActualProyecto = proyectoAnterior?.estado || 'En_Proceso';
       
       const nuevoPorcentajeCalculado = calcularAvanceAutomatico(fInicio, fFin, estadoActualProyecto);
       
-      // Forzamos que el porcentaje a actualizar en base de datos sea estrictamente el calculado
+      // Asignamos tanto el estado como el porcentaje actualizado para la base de datos
+      dataToUpdate.estado = estadoActualProyecto;
       dataToUpdate.porcentaje_avance = nuevoPorcentajeCalculado;
 
       const proyecto = await tx.proyecto.update({
@@ -421,7 +422,7 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
         data: dataToUpdate,
       });
 
-      // 3. Lista de campos a auditar (añadimos fecha_inicio y fecha_fin)
+      // 3. Lista de campos a auditar
       const camposAulitar = [
         { key: 'project_manager', label: 'Project Manager' },
         { key: 'lider_proyecto', label: 'Líder del Proyecto' },
@@ -439,7 +440,6 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
         let valorAnterior = (proyectoAnterior as any)?.[campo.key];
         let valorNuevo = dataToUpdate[campo.key];
 
-        // Formatear fechas a string 'YYYY-MM-DD' para una comparación y lectura limpia en el log
         if (campo.key === 'fecha_inicio' || campo.key === 'fecha_fin') {
           valorAnterior = valorAnterior ? new Date(valorAnterior).toISOString().split('T')[0] : null;
           valorNuevo = valorNuevo ? new Date(valorNuevo).toISOString().split('T')[0] : null;
