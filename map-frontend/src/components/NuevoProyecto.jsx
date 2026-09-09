@@ -60,7 +60,6 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
         presupuesto: formData.presupuesto ? parseFloat(formData.presupuesto) : 0
       };
 
-      // Solución: Petición enviada mediante la instancia cliente 'api' en lugar de fetch nativo
       const response = await api.post('/proyectos', payload);
       const data = response.data;
 
@@ -68,13 +67,11 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
         throw new Error(data.message || data.error || 'Error al guardar el proyecto.');
       }
 
-      // Extracción de variables devueltas por el servidor
       const proyectoCreado = data.data || data;
       const nombreProyecto = proyectoCreado.nombre || payload.nombre;
       const codigoGenerado = proyectoCreado.codigo || payload.codigo;
       const registrador = data.usuarioRegistrador || proyectoCreado.registrador || 'Administrador';
 
-      // Alerta de confirmación
       alert(
         `✅ ¡Iniciativa creada exitosamente!\n\n` +
         `• Nombre: ${nombreProyecto}\n` +
@@ -137,13 +134,26 @@ const NuevoProyecto = ({ isOpen, onClose, onProyectoCreado }) => {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Departamento</label>
-              <input
-                type="text"
+              <select
                 name="departamento"
                 value={formData.departamento}
                 onChange={handleChange}
                 className="w-full bg-[#121214] border border-gray-700 rounded p-2 text-white focus:outline-none focus:border-[#22c55e] text-sm"
-              />
+              >
+                <option value="TI">TI</option>
+                <option value="Atención al Cliente">Atención al Cliente</option>
+                <option value="RD">R&D</option>
+                <option value="Inteligencia de Negocios">Inteligencia de Negocios</option>
+                <option value="Finanzas">Finanzas</option>
+                <option value="Innovación y Desarrollo">Innovación y Desarrollo</option>
+                <option value="Desarrollo de Software">Desarrollo de Software</option>
+                <option value="Operaciones">Operaciones</option>
+                <option value="Comercial y Ventas">Comercial y Ventas</option>
+                <option value="Infraestructura y Redes">Infraestructura y Redes</option>
+                <option value="Gestión de Talento RRHH">Gestión de Talento RRHH</option>
+                <option value="PMO">PMO</option>
+                <option value="Seguridad de la Información">Seguridad de la Información</option>
+              </select>
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase text-gray-400 mb-1">Líder de Proyecto</label>

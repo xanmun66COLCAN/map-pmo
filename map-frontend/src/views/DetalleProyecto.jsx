@@ -43,6 +43,72 @@ const DetalleProyecto = () => {
         rolUsuario.includes("lider") || 
         rolUsuario.includes("líder");
 
+    // Estados para el formulario de nuevo KPI
+    const [mostrarFormKpi, setMostrarFormKpi] = useState(false);
+    const [nuevoKpi, setNuevoKpi] = useState({
+        nombre: '',
+        valor_objetivo: '',
+        valor_actual: '',
+        unidad: '%'
+    });
+    const [guardandoKpi, setGuardandoKpi] = useState(false);
+    
+    // Añade estas funciones dentro del componente DetalleProyecto junto a handleCrearKpi
+    const handleEditarKpi = async (kpiId, kpiActualizado) => {
+        try {
+            await api.put(`/proyectos/${id}/kpis/${kpiId}`, kpiActualizado);
+            alert('✅ ¡KPI actualizado exitosamente y registrado en la bitácora de auditoría!');
+            window.location.reload();
+        } catch (err) {
+            const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
+            alert(`Error al actualizar el KPI: ${mensaje}`);
+        }
+    };
+
+    const handleBorrarKpi = async (kpiId) => {
+        if (!window.confirm('¿Estás seguro de que deseas eliminar este KPI? Esta acción quedará registrada en el log de auditoría.')) {
+            return;
+        }
+
+        try {
+            await api.delete(`/proyectos/${id}/kpis/${kpiId}`);
+            alert('🗑️ ¡KPI eliminado correctamente!');
+            window.location.reload();
+        } catch (err) {
+            const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
+            alert(`Error al eliminar el KPI: ${mensaje}`);
+        }
+    };
+    const handleCrearKpi = async (e) => {
+        e.preventDefault();
+        if (!nuevoKpi.nombre || !nuevoKpi.valor_objetivo) {
+            alert('El nombre del KPI y el valor objetivo son obligatorios.');
+            return;
+        }
+
+        try {
+            setGuardandoKpi(true);
+            // Envía los datos al endpoint del backend usando el id del proyecto actual
+            const response = await api.post(`/proyectos/${id}/kpis`, {
+                nombre: nuevoKpi.nombre,
+                valor_objetivo: Number(nuevoKpi.valor_objetivo),
+                valor_actual: Number(nuevoKpi.valor_actual || 0),
+                unidad: nuevoKpi.unidad || '%'
+            });
+
+            alert('✅ ¡KPI creado exitosamente!');
+            setMostrarFormKpi(false);
+            setNuevoKpi({ nombre: '', valor_objetivo: '', valor_actual: '', unidad: '%' });
+            
+            // Opcional: Recarga o actualiza los datos del componente SeccionKpis si soporta un callback
+            window.location.reload(); 
+        } catch (err) {
+            const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
+            alert(`Error al crear el KPI: ${mensaje}`);
+        } finally {
+            setGuardandoKpi(false);
+        }
+    };
     // Cargar Proyecto y Bitácora
     useEffect(() => {
         let active = true;
@@ -493,13 +559,27 @@ const DetalleProyecto = () => {
                             <Briefcase size={12} /> Departamento
                         </span>
                         {isEditing ? (
-                            <input
-                                type="text"
+                            <select
                                 name="departamento"
                                 value={formData.departamento || ""}
                                 onChange={handleChange}
                                 className="w-full bg-[#0B0A0F] border border-[#A855F7] text-xs text-white rounded px-2 py-1.5 mt-1 focus:outline-none"
-                            />
+                            >
+                                <option value="">Seleccione un departamento...</option>
+                                <option value="TI">TI</option>
+                                <option value="Atención al Cliente">Atención al Cliente</option>
+                                <option value="RD">R&D</option>
+                                <option value="Inteligencia de Negocios">Inteligencia de Negocios</option>
+                                <option value="Finanzas">Finanzas</option>
+                                <option value="Innovación y Desarrollo">Innovación y Desarrollo</option>
+                                <option value="Desarrollo de Software">Desarrollo de Software</option>
+                                <option value="Operaciones">Operaciones</option>
+                                <option value="Comercial y Ventas">Comercial y Ventas</option>
+                                <option value="Infraestructura y Redes">Infraestructura y Redes</option>
+                                <option value="Gestión de Talento RRHH">Gestión de Talento RRHH</option>
+                                <option value="PMO">PMO</option>
+                                <option value="Seguridad de la Información">Seguridad de la Información</option>
+                            </select>
                         ) : (
                             <span className="text-sm font-semibold text-white">{proyecto.departamento || "General"}</span>
                         )}
@@ -639,9 +719,88 @@ const DetalleProyecto = () => {
                     </div>
                 </div>
 
+                {/* 📊 SECCIÓN DE KPIS CON BOTÓN DE CREACIÓN DIRECTA */}
+                <div className="bg-[#13111C] border border-[#2D2845] rounded-xl p-6 shadow-xl mb-6">
+                    <div className="flex justify-between items-center mb-4 pb-3 border-b border-[#2D2845]">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">📊 Indicadores Clave (KPIs)</h3>
+                        {esAdminOLider && (
+                            <button
+                                onClick={() => setMostrarFormKpi(!mostrarFormKpi)}
+                                className="bg-[#A855F7]/20 hover:bg-[#A855F7]/30 text-[#A855F7] border border-[#A855F7]/40 text-xs px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                                <Plus size={14} /> {mostrarFormKpi ? 'Cancelar' : 'Nuevo KPI'}
+                            </button>
+                        )}
+                    </div>
+
+                    {mostrarFormKpi && (
+                        <form onSubmit={handleCrearKpi} className="bg-[#0B0A0F] border border-[#2D2845] p-4 rounded-xl mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="sm:col-span-2">
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Nombre del KPI *</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ej. Índice de Satisfacción (CSAT)"
+                                    value={nuevoKpi.nombre}
+                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, nombre: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Valor Objetivo *</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    placeholder="95.0"
+                                    value={nuevoKpi.valor_objetivo}
+                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, valor_objetivo: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Valor Actual</label>
+                                <input
+                                    type="number"
+                                    step="any"
+                                    placeholder="88.5"
+                                    value={nuevoKpi.valor_actual}
+                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, valor_actual: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Unidad de Medida</label>
+                                <input
+                                    type="text"
+                                    placeholder="%, Puntos, USD, etc."
+                                    value={nuevoKpi.unidad}
+                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, unidad: e.target.value })}
+                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                />
+                            </div>
+                            <div className="flex items-end justify-end">
+                                <button
+                                    type="submit"
+                                    disabled={guardandoKpi}
+                                    className="w-full bg-[#22C55E] hover:bg-[#1eb355] text-white text-xs font-bold py-2.5 px-4 rounded-lg transition-all shadow-md cursor-pointer"
+                                >
+                                    {guardandoKpi ? 'Guardando...' : 'Guardar KPI'}
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
+                    <SeccionKpis 
+                        proyectoId={id} 
+                        esAdminOLider={esAdminOLider}
+                        onEditKpi={handleEditarKpi}
+                        onDeleteKpi={handleBorrarKpi}
+                    />
+                </div>
+
                 {/* Secciones Adicionales */}
                 <div className="space-y-6">
-                    <SeccionKpis proyectoId={id} esAdminOLider={esAdminOLider} />
                     <EvaluacionMulticriterio proyecto={proyecto} setProyecto={setProyecto} isEditing={isEditing} formData={formData} setFormData={setFormData} />
                 </div>
             </div>
