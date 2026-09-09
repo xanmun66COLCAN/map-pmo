@@ -10,7 +10,7 @@ const prisma = new PrismaClient();
 // Función auxiliar para calcular el avance temporal estimado (0% a 100%)
 const calcularAvanceAutomatico = (fechaInicio: Date | null, fechaFin: Date | null, estadoActual: string): number => {
   if (estadoActual === 'Completado') return 100;
-  if (estadoActual === 'Cancelado') return 0; // 👈 Quitamos 'Caso_de_Negocio' para que calcule por fechas si ya empezaron
+  if (estadoActual === 'Cancelado') return 0;
 
   if (!fechaInicio || !fechaFin) return 0;
 
@@ -60,7 +60,6 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
     const variacionPresupuestaria = totalPresupuesto - totalCostoReal;
     const tieneDesviacionNegativaGlobal = totalCostoReal > totalPresupuesto;
 
-    // Promedio de avance general calculado dinámicamente
     let sumaAvances = 0;
     if (todosLosProyectos.length > 0) {
       todosLosProyectos.forEach(p => {
@@ -132,7 +131,6 @@ export const getProyectos = async (req: Request, res: Response): Promise<void> =
         ...p,
         porcentaje_avance: calcularAvanceAutomatico(p.fecha_inicio, p.fecha_fin, p.estado),
         puntaje_global: evalMC ? evalMC.puntaje_global : (p.puntaje_global ?? null),
-        // Estandarización de nombres para coincidir con el Frontend y el Detail
         alerta_desviacion_negativa: tieneDesviacion,
         diferencia_presupuesto: presupuestoNum - costoRealNum,
         mensaje_desviacion: tieneDesviacion 
@@ -205,7 +203,6 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
     const fechaInicioParsed = fecha_inicio ? new Date(fecha_inicio) : new Date();
     const fechaFinParsed = fecha_fin ? new Date(fecha_fin) : null;
     
-    // Cálculo automático inicial del avance basado en fechas y estado
     const avanceInicial = calcularAvanceAutomatico(fechaInicioParsed, fechaFinParsed, estadoInicial);
 
     const dataProyecto: any = {
@@ -278,80 +275,6 @@ export const crearProyecto = async (req: AuthRequest, res: Response): Promise<vo
   }
 };
 
-// ACTUALIZAR CALIFICACIÓN MULTICRITERIO
-export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: Response): Promise<void> => {
-  const id = String(req.params.id);
-  
-  const idUsuarioAccion = req.usuario?.id 
-    ? Number(req.usuario.id) 
-    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
-
-  try {
-    const { beneficio, costo, riesgo, alineacion } = req.body;
-
-    if (
-      beneficio === undefined || 
-      costo === undefined || 
-      riesgo === undefined || 
-      alineacion === undefined
-    ) {
-      res.status(400).json({ success: false, message: 'Todos los criterios son obligatorios.' });
-      return;
-    }
-
-    const scoreCalculado = 
-      (Number(beneficio) * 0.30) + 
-      (Number(costo) * 0.25) + 
-      (Number(riesgo) * 0.20) + 
-      (Number(alineacion) * 0.25);
-
-    const puntaje_global = Number(scoreCalculado.toFixed(2));
-
-    const proyectoActualizado = await prisma.$transaction(async (tx) => {
-      const proyectoAnterior = await tx.proyecto.findUnique({
-        where: { id },
-        select: { puntaje_global: true }
-      });
-
-      const proyecto = await tx.proyecto.update({
-        where: { id },
-        data: {
-          beneficio: Number(beneficio),
-          costo: Number(costo),
-          riesgo: Number(riesgo),
-          alineacion: Number(alineacion),
-          puntaje_global,
-        },
-      });
-
-      await tx.logs_auditoria.create({
-        data: {
-          id_usuario_accion: idUsuarioAccion,
-          id_proyecto: id,
-          campo_modificado: 'calificacion_multicriterio',
-          valor_anterior: `Evaluación previa: ${proyectoAnterior?.puntaje_global ?? 'Ninguna'}`,
-          valor_nuevo: `Puntaje: ${puntaje_global}/10 (B:${beneficio}, C:${costo}, R:${riesgo}, A:${alineacion})`,
-          fecha_transaccion: new Date(),
-        },
-      });
-
-      return proyecto;
-    });
-
-    res.status(200).json({
-      success: true,
-      message: 'Calificación multicriterio actualizada exitosamente',
-      data: {
-        ...proyectoActualizado,
-        porcentaje_avance: calcularAvanceAutomatico(proyectoActualizado.fecha_inicio, proyectoActualizado.fecha_fin, proyectoActualizado.estado)
-      },
-    });
-  } catch (error: any) {
-    console.error('❌ Error al actualizar calificación multicriterio:', error);
-    res.status(500).json({ success: false, message: 'Error al actualizar la evaluación.', error: error.message });
-  }
-};
-
 // UPDATE
 export const updateProyecto = async (req: AuthRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
@@ -366,7 +289,7 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       codigo: _codigo, 
       creado_en: _creado_en, 
       actualizado_en: _actualizado_en, 
-      porcentaje_avance: _porcentaje_avance, // 👈 'estado' ya NO está aquí, ahora pasará a 'rest'
+      porcentaje_avance: _porcentaje_avance, 
       solicitante, 
       fecha_inicio, 
       fecha_fin, 
@@ -400,20 +323,16 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
     } 
 
     const proyectoActualizado = await prisma.$transaction(async (tx) => {
-      // 1. Traemos el proyecto anterior completo para comparar
       const proyectoAnterior = await tx.proyecto.findUnique({
         where: { id },
       });
 
-      // 2. Tomamos el nuevo estado si el usuario lo cambió, de lo contrario mantenemos el anterior
       const estadoActualProyecto = dataToUpdate.estado || proyectoAnterior?.estado || 'En_Proceso';
-      
       const fInicio = dataToUpdate.fecha_inicio || proyectoAnterior?.fecha_inicio;
       const fFin = dataToUpdate.fecha_fin || proyectoAnterior?.fecha_fin;
       
       const nuevoPorcentajeCalculado = calcularAvanceAutomatico(fInicio, fFin, estadoActualProyecto);
       
-      // Asignamos tanto el estado como el porcentaje actualizado para la base de datos
       dataToUpdate.estado = estadoActualProyecto;
       dataToUpdate.porcentaje_avance = nuevoPorcentajeCalculado;
 
@@ -422,7 +341,6 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
         data: dataToUpdate,
       });
 
-      // 3. Lista de campos a auditar
       const camposAulitar = [
         { key: 'project_manager', label: 'Project Manager' },
         { key: 'lider_proyecto', label: 'Líder del Proyecto' },
@@ -435,7 +353,6 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
         { key: 'fecha_fin', label: 'Fecha de Fin' }
       ];
 
-      // 4. Registrar en auditoría los cambios detectados campo por campo
       for (const campo of camposAulitar) {
         let valorAnterior = (proyectoAnterior as any)?.[campo.key];
         let valorNuevo = dataToUpdate[campo.key];
@@ -649,5 +566,183 @@ export const getBitacoraProyecto = async (req: Request, res: Response): Promise<
     res.status(200).json({ success: true, data: bitacora });
   } catch (error: any) {
     res.status(500).json({ success: false, message: 'Error al obtener bitácora', error: error.message });
+  }
+};
+
+// ACTUALIZAR CALIFICACIÓN MULTICRITERIO
+export const actualizarEvaluacionMulticriterio = async (req: AuthRequest, res: Response): Promise<void> => {
+  const id = String(req.params.id);
+  
+  const idUsuarioAccion = req.usuario?.id 
+    ? Number(req.usuario.id) 
+    : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
+
+  try {
+    const { beneficio, costo, riesgo, alineacion } = req.body;
+
+    if (
+      beneficio === undefined || 
+      costo === undefined || 
+      riesgo === undefined || 
+      alineacion === undefined
+    ) {
+      res.status(400).json({ success: false, message: 'Todos los criterios son obligatorios.' });
+      return;
+    }
+
+    const scoreCalculado = 
+      (Number(beneficio) * 0.30) + 
+      (Number(costo) * 0.25) + 
+      (Number(riesgo) * 0.20) + 
+      (Number(alineacion) * 0.25);
+
+    const puntaje_global = Number(scoreCalculado.toFixed(2));
+
+    const proyectoActualizado = await prisma.$transaction(async (tx) => {
+      const proyectoAnterior = await tx.proyecto.findUnique({
+        where: { id },
+        select: { puntaje_global: true }
+      });
+
+      const proyecto = await tx.proyecto.update({
+        where: { id },
+        data: {
+          beneficio: Number(beneficio),
+          costo: Number(costo),
+          riesgo: Number(riesgo),
+          alineacion: Number(alineacion),
+          puntaje_global,
+        },
+      });
+
+      await tx.logs_auditoria.create({
+        data: {
+          id_usuario_accion: idUsuarioAccion,
+          id_proyecto: id,
+          campo_modificado: 'calificacion_multicriterio',
+          valor_anterior: `Evaluación previa: ${proyectoAnterior?.puntaje_global ?? 'Ninguna'}`,
+          valor_nuevo: `Puntaje: ${puntaje_global}/10 (B:${beneficio}, C:${costo}, R:${riesgo}, A:${alineacion})`,
+          fecha_transaccion: new Date(),
+        },
+      });
+
+      return proyecto;
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Calificación multicriterio actualizada exitosamente',
+      data: {
+        ...proyectoActualizado,
+        porcentaje_avance: calcularAvanceAutomatico(proyectoActualizado.fecha_inicio, proyectoActualizado.fecha_fin, proyectoActualizado.estado)
+      },
+    });
+  } catch (error: any) {
+    console.error('❌ Error al actualizar calificación multicriterio:', error);
+    res.status(500).json({ success: false, message: 'Error al actualizar la evaluación.', error: error.message });
+  }
+};
+
+// ==========================================
+// 📊 GESTIÓN DE KPIS Y AUDITORÍA INTEGRADA
+// ==========================================
+
+// 🟢 GET: Obtener todos los KPIs de un proyecto específico
+export const getKpisByProyecto = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const proyectoId = String(req.params.id);
+
+    const kpis = await prisma.kpi.findMany({
+      where: { proyecto_id: proyectoId },
+      include: { historial: true },
+      orderBy: { created_at: 'desc' },
+    });
+
+    res.json({ success: true, data: kpis });
+  } catch (error: any) {
+    console.error("❌ Error al obtener KPIs:", error);
+    res.status(500).json({ success: false, message: 'Error interno al obtener los KPIs.', error: error.message });
+  }
+};
+
+// 🟢 POST: Crear un nuevo KPI para una iniciativa con auditoría
+export const crearKpi = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const proyectoId = String(req.params.id);
+    const { nombre_kpi, descripcion, meta_valor, valor_actual, unidad_medida, frecuencia } = req.body;
+    
+    const idUsuarioAccion = req.usuario?.id 
+      ? Number(req.usuario.id) 
+      : (req.usuario?.userId ? Number(req.usuario.userId) : (req.usuario?.sub ? Number(req.usuario.sub) : null));
+
+    if (!proyectoId || !nombre_kpi || meta_valor === undefined) {
+      res.status(400).json({ success: false, message: 'El proyecto, el nombre del KPI y la meta son obligatorios.' });
+      return;
+    }
+
+    const resultado = await prisma.$transaction(async (tx) => {
+      const nuevoKpi = await (tx as any).kpi.create({
+        data: {
+          proyecto_id: proyectoId,
+          nombre_kpi,
+          descripcion: descripcion || '',
+          meta_valor: Number(meta_valor),
+          valor_actual: valor_actual !== undefined ? Number(valor_actual) : 0,
+          unidad_medida: unidad_medida || '%',
+          frecuencia: frecuencia || 'Mensual',
+        },
+      });
+
+      await (tx as any).logs_auditoria.create({
+        data: {
+          id_usuario_accion: idUsuarioAccion,
+          id_proyecto: proyectoId,
+          campo_modificado: 'crear_kpi',
+          valor_anterior: 'No existía',
+          valor_nuevo: `KPI creado: ${nombre_kpi} (Meta: ${meta_valor} ${unidad_medida || '%'})`,
+          fecha_transaccion: new Date()
+        }
+      });
+
+      return nuevoKpi;
+    });
+
+    res.status(201).json({ success: true, message: 'KPI creado exitosamente', data: resultado });
+  } catch (error: any) {
+    console.error("❌ Error al crear KPI:", error);
+    res.status(500).json({ success: false, message: 'Error al registrar el KPI.', error: error.message });
+  }
+};
+
+// 🟢 PUT: Actualizar el valor actual de un KPI y registrar su historial
+export const actualizarValorKpi = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; // ID del KPI
+    const { valor_nuevo, usuario_id } = req.body;
+
+    if (valor_nuevo === undefined) {
+      res.status(400).json({ success: false, message: 'El nuevo valor es obligatorio.' });
+      return;
+    }
+
+    const kpiIdNum = Number(id);
+
+    const kpiActualizado = await prisma.kpi.update({
+      where: { id: kpiIdNum },
+      data: { valor_actual: Number(valor_nuevo) },
+    });
+
+    await prisma.historialKpi.create({
+      data: {
+        kpi_id: kpiIdNum,
+        valor_registrado: Number(valor_nuevo),
+        usuario_id: usuario_id ? Number(usuario_id) : null,
+      },
+    });
+
+    res.json({ success: true, message: 'Medición de KPI actualizada con éxito', data: kpiActualizado });
+  } catch (error: any) {
+    console.error("❌ Error al actualizar KPI:", error);
+    res.status(500).json({ success: false, message: 'Error al actualizar el KPI.', error: error.message });
   }
 };

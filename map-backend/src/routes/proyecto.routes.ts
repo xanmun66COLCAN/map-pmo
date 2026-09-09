@@ -9,8 +9,12 @@ import {
   actualizarEstadoIniciativa,
   getLogsAuditoria,
   actualizarEvaluacionMulticriterio,
-  agregarSeguimiento,     // 👈 Nuevo controlador de bitácora
-  getBitacoraProyecto     // 👈 Nuevo controlador de bitácora
+  agregarSeguimiento,     
+  getBitacoraProyecto,
+  // 👈 1. Importa los controladores de KPIs que creamos antes
+  getKpisByProyecto,
+  crearKpi,
+  actualizarValorKpi
 } from '../controllers/proyecto.controller'; 
 import verificarToken from '../middlewares/auth.middleware';
 
@@ -36,8 +40,13 @@ router.patch('/:id/estado', actualizarEstadoIniciativa);
 router.put('/:id/evaluacion', actualizarEvaluacionMulticriterio);
 
 // 📌 Rutas de Bitácora de Seguimiento Ejecutivo
-router.get('/:id/bitacora', getBitacoraProyecto);     // Obtener historial de bitácora
-router.post('/:id/bitacora', agregarSeguimiento);    // Crear un nuevo registro en la bitácora
+router.get('/:id/bitacora', getBitacoraProyecto);     
+router.post('/:id/bitacora', agregarSeguimiento);    
+
+// 📌 2. AÑADE AQUÍ LAS RUTAS DE KPIS PARA QUE COINCIDAN CON EL FRONTEND
+router.get('/:id/kpis', getKpisByProyecto);          // Listar KPIs del proyecto
+router.post('/:id/kpis', crearKpi);                  // Crear KPI con auditoría automática
+router.put('/kpis/:id', actualizarValorKpi);         // Actualizar medición del KPI
 
 // 6. Obtener proyecto específico por ID
 router.get('/:id', getProyectoById);

@@ -49,7 +49,8 @@ const DetalleProyecto = () => {
         nombre: '',
         valor_objetivo: '',
         valor_actual: '',
-        unidad: '%'
+        unidad: '%',
+        descripcion: ''
     });
     const [guardandoKpi, setGuardandoKpi] = useState(false);
     
@@ -81,6 +82,7 @@ const DetalleProyecto = () => {
     };
     const handleCrearKpi = async (e) => {
         e.preventDefault();
+        // 1. Validar usando las propiedades que maneja tu formulario
         if (!nuevoKpi.nombre || !nuevoKpi.valor_objetivo) {
             alert('El nombre del KPI y el valor objetivo son obligatorios.');
             return;
@@ -88,19 +90,19 @@ const DetalleProyecto = () => {
 
         try {
             setGuardandoKpi(true);
-            // Envía los datos al endpoint del backend usando el id del proyecto actual
+            // 2. Enviar con los nombres exactos que exige el backend (nombre_kpi y meta_valor)
             const response = await api.post(`/proyectos/${id}/kpis`, {
-                nombre: nuevoKpi.nombre,
-                valor_objetivo: Number(nuevoKpi.valor_objetivo),
+                nombre_kpi: nuevoKpi.nombre,          // 👈 Cambiado de 'nombre' a 'nombre_kpi'
+                meta_valor: Number(nuevoKpi.valor_objetivo), // 👈 Cambiado de 'valor_objetivo' a 'meta_valor'
                 valor_actual: Number(nuevoKpi.valor_actual || 0),
-                unidad: nuevoKpi.unidad || '%'
+                unidad_medida: nuevoKpi.unidad || '%',       // 👈 Cambiado de 'unidad' a 'unidad_medida'
+                descripcion: nuevoKpi.descripcion || ''
             });
 
             alert('✅ ¡KPI creado exitosamente!');
             setMostrarFormKpi(false);
             setNuevoKpi({ nombre: '', valor_objetivo: '', valor_actual: '', unidad: '%' });
             
-            // Opcional: Recarga o actualiza los datos del componente SeccionKpis si soporta un callback
             window.location.reload(); 
         } catch (err) {
             const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
@@ -734,58 +736,98 @@ const DetalleProyecto = () => {
                     </div>
 
                     {mostrarFormKpi && (
-                        <form onSubmit={handleCrearKpi} className="bg-[#0B0A0F] border border-[#2D2845] p-4 rounded-xl mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="sm:col-span-2">
-                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Nombre del KPI *</label>
+                        <form onSubmit={handleCrearKpi} className="space-y-4 bg-slate-900 p-6 rounded-xl border border-slate-800 shadow-xl text-slate-100">
+                            <h3 className="text-lg font-semibold text-emerald-400 flex items-center gap-2">
+                                <span>📊</span> Nuevo Indicador de Rendimiento (KPI)
+                            </h3>
+
+                            {/* Campo Nombre */}
+                            <div>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                    Nombre del KPI <span className="text-red-400">*</span>
+                                </label>
                                 <input
                                     type="text"
-                                    placeholder="Ej. Índice de Satisfacción (CSAT)"
                                     value={nuevoKpi.nombre}
                                     onChange={(e) => setNuevoKpi({ ...nuevoKpi, nombre: e.target.value })}
-                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                                    placeholder="Ej: Ejecución presupuestal"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Valor Objetivo *</label>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    placeholder="95.0"
-                                    value={nuevoKpi.valor_objetivo}
-                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, valor_objetivo: e.target.value })}
-                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
-                                    required
-                                />
+
+                            {/* Fila doble: Valor Objetivo y Valor Actual */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                        Valor Objetivo (Meta) <span className="text-red-400">*</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={nuevoKpi.valor_objetivo}
+                                        onChange={(e) => setNuevoKpi({ ...nuevoKpi, valor_objetivo: e.target.value })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                                        placeholder="100"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                        Valor Actual Inicial
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={nuevoKpi.valor_actual}
+                                        onChange={(e) => setNuevoKpi({ ...nuevoKpi, valor_actual: e.target.value })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                                        placeholder="0"
+                                    />
+                                </div>
                             </div>
+
+                            {/* Campo Unidad de Medida */}
                             <div>
-                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Valor Actual</label>
-                                <input
-                                    type="number"
-                                    step="any"
-                                    placeholder="88.5"
-                                    value={nuevoKpi.valor_actual}
-                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, valor_actual: e.target.value })}
-                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[11px] text-gray-400 uppercase font-bold mb-1">Unidad de Medida</label>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                    Unidad de Medida
+                                </label>
                                 <input
                                     type="text"
-                                    placeholder="%, Puntos, USD, etc."
                                     value={nuevoKpi.unidad}
                                     onChange={(e) => setNuevoKpi({ ...nuevoKpi, unidad: e.target.value })}
-                                    className="w-full bg-[#13111C] border border-[#2D2845] text-xs text-white rounded-lg p-2.5 focus:border-[#A855F7] focus:outline-none"
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                                    placeholder="%, $, Días, Unidades"
                                 />
                             </div>
-                            <div className="flex items-end justify-end">
+
+                            {/* Campo de Descripción */}
+                            <div>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                    Descripción (Opcional)
+                                </label>
+                                <textarea
+                                    value={nuevoKpi.descripcion}
+                                    onChange={(e) => setNuevoKpi({ ...nuevoKpi, descripcion: e.target.value })}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all resize-none"
+                                    rows="3"
+                                    placeholder="Explica brevemente para qué sirve este indicador y cómo se calcula..."
+                                />
+                            </div>
+
+                            {/* Botones de acción estilizados */}
+                            <div className="flex items-center justify-end space-x-3 pt-2 border-t border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarFormKpi(false)}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-slate-200 transition-all"
+                                >
+                                    Cancelar
+                                </button>
                                 <button
                                     type="submit"
                                     disabled={guardandoKpi}
-                                    className="w-full bg-[#22C55E] hover:bg-[#1eb355] text-white text-xs font-bold py-2.5 px-4 rounded-lg transition-all shadow-md cursor-pointer"
+                                    className="px-5 py-2 rounded-lg text-sm font-medium text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-all disabled:opacity-50 shadow-lg shadow-emerald-950/50"
                                 >
-                                    {guardandoKpi ? 'Guardando...' : 'Guardar KPI'}
+                                    {guardandoKpi ? 'Guardando...' : 'Crear KPI'}
                                 </button>
                             </div>
                         </form>
