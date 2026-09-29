@@ -112,7 +112,11 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
 // GET ALL
 export const getProyectos = async (req: Request, res: Response): Promise<void> => {
   try {
-    const proyectos = await prisma.proyecto.findMany();
+    const proyectos = await prisma.proyecto.findMany({
+      include: {
+        Comite: true, // 👈 Si falta esto, comite llega como undefined
+      },
+    });
     
     let evaluaciones: any[] = [];
     try {

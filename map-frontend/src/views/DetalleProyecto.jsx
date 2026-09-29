@@ -16,10 +16,22 @@ const DetalleProyecto = () => {
     const [formData, setFormData] = useState({});
     const [saving, setSaving] = useState(false);
     const [showDebug, setShowDebug] = useState(false);
-    
+    const [comiteSeleccionado, setComiteSeleccionado] = useState(null);
+    const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
+    const [nuevaFechaHora, setNuevaFechaHora] = useState('');
+
     // Estado controlado para el Reporte Ejecutivo (Inicia en false)
     const [mostrarModalReporte, setMostrarModalReporte] = useState(false);
-    
+
+    const [comites, setComites] = useState([]);
+    const [mostrarModalComite, setMostrarModalComite] = useState(false);
+    const [nuevoComiteState, setNuevoComiteState] = useState({
+        titulo: '',
+        tipo: 'Seguimiento',
+        fechaHora: '',
+        descripcion: ''
+    });
+
     // Estados para la Bitácora de Seguimiento Ejecutivo
     const [bitacora, setBitacora] = useState([]);
     const [mostrarFormBitacora, setMostrarFormBitacora] = useState(false);
@@ -35,6 +47,32 @@ const DetalleProyecto = () => {
     const usuarioLogueado = JSON.parse(localStorage.getItem("usuario")) || {};
     const rolUsuario = String(usuarioLogueado.rol || usuarioLogueado.tipo_rol || "").toLowerCase().trim();
     const idRol = Number(usuarioLogueado.id_rol || usuarioLogueado.rol_id);
+    const idUsuarioReal = usuarioLogueado.id || usuarioLogueado.id_usuario || usuarioLogueado.usuario_id;
+
+    const handleActualizarComite = async (e) => {
+        e.preventDefault();
+        if (!comiteSeleccionado) return;
+
+        try {
+            const res = await api.put(`/comites/${comiteSeleccionado.id}`, {
+                fechaHora: nuevaFechaHora,
+                motivo: 'Reprogramación por causa mayor',
+                id_usuario: idUsuarioReal, // 👈 Enviado para registro en la auditoría
+                usuario_id: idUsuarioReal
+            });
+
+            if (res.data.success) {
+                // Actualizamos la lista localmente reemplazando el comité modificado
+                setComites(prev => prev.map(c => c.id === comiteSeleccionado.id ? res.data.data : c));
+                setMostrarModalEditar(false);
+                setComiteSeleccionado(null);
+                alert('¡Comité reprogramado con éxito! Se han actualizado las notificaciones.');
+            }
+        } catch (err) {
+            console.error('Error al actualizar comité:', err);
+            alert('Hubo un error al intentar reprogramar el comité.');
+        }
+    };
 
     const esAdminOLider = 
         idRol === 1 || 
@@ -54,10 +92,13 @@ const DetalleProyecto = () => {
     });
     const [guardandoKpi, setGuardandoKpi] = useState(false);
     
-    // Añade estas funciones dentro del componente DetalleProyecto junto a handleCrearKpi
+    // Funciones para KPIs
     const handleEditarKpi = async (kpiId, kpiActualizado) => {
         try {
-            await api.put(`/proyectos/${id}/kpis/${kpiId}`, kpiActualizado);
+            await api.put(`/proyectos/${id}/kpis/${kpiId}`, {
+                ...kpiActualizado,
+                id_usuario: idUsuarioReal
+            });
             alert('✅ ¡KPI actualizado exitosamente y registrado en la bitácora de auditoría!');
             window.location.reload();
         } catch (err) {
@@ -80,9 +121,9 @@ const DetalleProyecto = () => {
             alert(`Error al eliminar el KPI: ${mensaje}`);
         }
     };
+
     const handleCrearKpi = async (e) => {
         e.preventDefault();
-        // 1. Validar usando las propiedades que maneja tu formulario
         if (!nuevoKpi.nombre || !nuevoKpi.valor_objetivo) {
             alert('El nombre del KPI y el valor objetivo son obligatorios.');
             return;
@@ -90,13 +131,13 @@ const DetalleProyecto = () => {
 
         try {
             setGuardandoKpi(true);
-            // 2. Enviar con los nombres exactos que exige el backend (nombre_kpi y meta_valor)
-            const response = await api.post(`/proyectos/${id}/kpis`, {
-                nombre_kpi: nuevoKpi.nombre,          // 👈 Cambiado de 'nombre' a 'nombre_kpi'
-                meta_valor: Number(nuevoKpi.valor_objetivo), // 👈 Cambiado de 'valor_objetivo' a 'meta_valor'
+            await api.post(`/proyectos/${id}/kpis`, {
+                nombre_kpi: nuevoKpi.nombre,
+                meta_valor: Number(nuevoKpi.valor_objetivo),
                 valor_actual: Number(nuevoKpi.valor_actual || 0),
-                unidad_medida: nuevoKpi.unidad || '%',       // 👈 Cambiado de 'unidad' a 'unidad_medida'
-                descripcion: nuevoKpi.descripcion || ''
+                unidad_medida: nuevoKpi.unidad || '%',
+                descripcion: nuevoKpi.descripcion || '',
+                id_usuario: idUsuarioReal
             });
 
             alert('✅ ¡KPI creado exitosamente!');
@@ -111,6 +152,7 @@ const DetalleProyecto = () => {
             setGuardandoKpi(false);
         }
     };
+
     // Cargar Proyecto y Bitácora
     useEffect(() => {
         let active = true;
@@ -161,7 +203,10 @@ const DetalleProyecto = () => {
             setSaving(true);
             const { entregables_completados, ...datosAEnviar } = formData;
 
-            const response = await api.put(`/proyectos/${id}`, datosAEnviar);
+            const response = await api.put(`/proyectos/${id}`, {
+                ...datosAEnviar,
+                id_usuario: idUsuarioReal
+            });
             const responseData = response.data;
             const datosActualizados = responseData?.data || responseData;
             
@@ -186,7 +231,10 @@ const DetalleProyecto = () => {
 
         try {
             setGuardandoBitacora(true);
-            const response = await api.post(`/proyectos/${id}/bitacora`, nuevoSeguimiento);
+            const response = await api.post(`/proyectos/${id}/bitacora`, {
+                ...nuevoSeguimiento,
+                id_usuario: idUsuarioReal
+            });
             const creado = response.data?.data || response.data;
 
             setBitacora([creado, ...bitacora]);
@@ -238,41 +286,348 @@ const DetalleProyecto = () => {
                         ← Volver al Dashboard
                     </button>
 
-                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap">
-                        {/* Botón Reporte Ejecutivo */}
-                        <button 
-                            onClick={() => setMostrarModalReporte(true)} 
-                            className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-lg shadow-purple-500/20 cursor-pointer"
-                        >
-                            <FileText size={14} /> Reporte Ejecutivo
-                        </button>
+                    {/* Cabecera con Título, ID y Botones de Acción Global */}
+                    <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-4 w-full">
+                        <div>
+                            <h1 className="text-xl font-bold text-slate-100">{proyecto?.nombre || 'Detalle del Proyecto'}</h1>
+                            <p className="text-xs text-slate-400 font-mono">ID: {proyecto?.id}</p>
+                        </div>
 
-                        <button onClick={() => setShowDebug(!showDebug)} className="bg-[#2D2845] hover:bg-[#3D375B] text-purple-300 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-md border border-[#A855F7]/30 cursor-pointer" title="Ver JSON recibido">
-                            <Code size={14} /> {showDebug ? "Ocultar JSON" : "Ver JSON"}
-                        </button>
+                        <div className="flex items-center gap-3 w-full sm:w-auto justify-end flex-wrap">
 
-                        {esAdminOLider ? (
-                            isEditing ? (
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => { setIsEditing(false); setFormData(proyecto); }} className="bg-[#2D2845] hover:bg-[#3D375B] text-gray-300 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer">
-                                        <X size={14} /> Cancelar
+                            {/* Botón Agendar Comité */}
+                            <button
+                                type="button"
+                                onClick={() => setMostrarModalComite(true)}
+                                className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-lg shadow-purple-500/20 cursor-pointer"
+                            >
+                                <Calendar size={14} /> Agendar Comité
+                            </button>
+
+                            {/* Botón Reporte Ejecutivo (Base) */}
+                            <button 
+                                onClick={() => setMostrarModalReporte(true)} 
+                                className="bg-purple-600 hover:bg-purple-500 text-white text-xs px-3.5 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-lg shadow-purple-500/20 cursor-pointer"
+                            >
+                                <FileText size={14} /> Reporte Ejecutivo
+                            </button>
+
+                            <button onClick={() => setShowDebug(!showDebug)} className="bg-[#2D2845] hover:bg-[#3D375B] text-purple-300 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-md border border-[#A855F7]/30 cursor-pointer" title="Ver JSON recibido">
+                                <Code size={14} /> {showDebug ? "Ocultar JSON" : "Ver JSON"}
+                            </button>
+
+                            {esAdminOLider ? (
+                                isEditing ? (
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={() => { setIsEditing(false); setFormData(proyecto); }} className="bg-[#2D2845] hover:bg-[#3D375B] text-gray-300 text-xs px-3 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer">
+                                            <X size={14} /> Cancelar
+                                        </button>
+                                        <button onClick={handleSave} disabled={saving} className="bg-[#22C55E] hover:bg-[#1eb355] text-white text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-md shadow-[#22C55E]/25 cursor-pointer">
+                                            <Save size={14} /> {saving ? "Guardando..." : "Guardar Cambios"}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button onClick={() => setIsEditing(true)} className="bg-[#A855F7] hover:bg-[#9333EA] text-white text-xs px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg shadow-[#A855F7]/30 border border-purple-400/30 cursor-pointer">
+                                        <Edit3 size={15} /> Actualizar Información
                                     </button>
-                                    <button onClick={handleSave} disabled={saving} className="bg-[#22C55E] hover:bg-[#1eb355] text-white text-xs px-4 py-2 rounded-lg font-bold flex items-center gap-1.5 transition-all shadow-md shadow-[#22C55E]/25 cursor-pointer">
-                                        <Save size={14} /> {saving ? "Guardando..." : "Guardar Cambios"}
-                                    </button>
-                                </div>
+                                )
                             ) : (
-                                <button onClick={() => setIsEditing(true)} className="bg-[#A855F7] hover:bg-[#9333EA] text-white text-xs px-4 py-2.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-lg shadow-[#A855F7]/30 border border-purple-400/30 cursor-pointer">
-                                    <Edit3 size={15} /> Actualizar Información
-                                </button>
-                            )
-                        ) : (
-                            <span className="text-[11px] text-gray-400 bg-[#13111C] px-3 py-1.5 rounded-lg border border-[#2D2845]">
-                                👁️ Modo Solo Lectura
-                            </span>
-                        )}
+                                <span className="text-[11px] text-gray-400 bg-[#13111C] px-3 py-1.5 rounded-lg border border-[#2D2845]">
+                                    👁️ Modo Solo Lectura
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </div>
+
+                {/* Modal para Reprogramar Comité */}
+                {mostrarModalEditar && (
+                    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                if (!comiteSeleccionado) return;
+
+                                try {
+                                    const res = await api.put(`/comites/${comiteSeleccionado.id}`, {
+                                        fechaHora: nuevaFechaHora,
+                                        motivo: 'Reprogramación por causa mayor',
+                                        id_usuario: idUsuarioReal, // 👈 Identidad enviada a auditoría
+                                        usuario_id: idUsuarioReal
+                                    }, {
+                                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                                    });
+
+                                    if (res.data.success) {
+                                        const comiteActualizado = res.data.data || res.data;
+                                        setComites(prev => prev.map(c => c.id === comiteSeleccionado.id ? comiteActualizado : c));
+                                        setMostrarModalEditar(false);
+                                        setComiteSeleccionado(null);
+                                        setNuevaFechaHora('');
+                                        alert('¡Comité reprogramado con éxito! Se han actualizado las notificaciones por causa mayor.');
+                                    }
+                                } catch (err) {
+                                    console.error('Error al actualizar comité:', err);
+                                    alert('Hubo un error al intentar reprogramar el comité.');
+                                }
+                            }}
+                            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl text-slate-100 space-y-4"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                <h3 className="text-lg font-semibold text-amber-400">⚠️ Reprogramar Comité</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarModalEditar(false)}
+                                    className="text-slate-400 hover:text-slate-200 text-sm"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            {/* Selector desplegable de comités futuros */}
+                            <div>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                    Seleccionar Comité a Reprogramar
+                                </label>
+                                <select
+                                    value={comiteSeleccionado?.id || ''}
+                                    onChange={(e) => {
+                                        const idSeleccionado = Number(e.target.value);
+                                        const comiteEncontrado = comites.find(c => c.id === idSeleccionado);
+                                        if (comiteEncontrado) {
+                                            setComiteSeleccionado(comiteEncontrado);
+                                            const fechaFormateada = comiteEncontrado.fechaHora 
+                                                ? new Date(comiteEncontrado.fechaHora).toISOString().slice(0, 16) 
+                                                : '';
+                                            setNuevaFechaHora(fechaFormateada);
+                                        }
+                                    }}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 transition-colors"
+                                >
+                                    <option value="" disabled>Selecciona un comité...</option>
+                                    {(() => {
+                                        const ahora = new Date();
+                                        const comitesFuturos = comites 
+                                            ? comites.filter(c => new Date(c.fechaHora) >= ahora)
+                                            : [];
+
+                                        if (comitesFuturos.length === 0) {
+                                            return <option value="" disabled>No hay comités futuros disponibles</option>;
+                                        }
+
+                                        return comitesFuturos.map((c) => (
+                                            <option key={c.id} value={c.id}>
+                                                {c.titulo} ({new Date(c.fechaHora).toLocaleDateString('es-ES', { dateStyle: 'medium' })})
+                                            </option>
+                                        ));
+                                    })()}
+                                </select>
+                            </div>
+
+                            {/* Información del comité seleccionado */}
+                            <div>
+                                <p className="text-xs text-slate-400 mb-1">Comité activo:</p>
+                                <p className="text-sm font-semibold text-slate-200 bg-slate-800/60 p-2 rounded-lg border border-slate-700/50">
+                                    {comiteSeleccionado ? comiteSeleccionado.titulo : 'Ninguno seleccionado'}
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">
+                                    Nueva Fecha y Hora (Causa Mayor)
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    required
+                                    value={nuevaFechaHora}
+                                    onChange={(e) => setNuevaFechaHora(e.target.value)}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-amber-500 transition-colors"
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarModalEditar(false)}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={!comiteSeleccionado}
+                                    className="px-5 py-2 rounded-lg text-sm font-medium text-slate-950 bg-amber-400 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-950/50 disabled:opacity-50"
+                                >
+                                    Guardar Cambios
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                {/* Modal Oscuro para Agendar Comité */}
+                {mostrarModalComite && (
+                    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                        <form
+                            onSubmit={async (e) => {
+                                e.preventDefault();
+                                try {
+                                    const res = await api.post('/comites', {
+                                        ...nuevoComiteState,
+                                        idProyecto: proyecto?.id,
+                                        id_usuario: idUsuarioReal, // 👈 Identidad enviada a auditoría
+                                        usuario_id: idUsuarioReal
+                                    }, {
+                                        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                                    });
+
+                                    if (res.data.success) {
+                                        const comiteCreado = res.data.data || res.data;
+                                        setComites(prev => [...prev, comiteCreado]);
+                                        setMostrarModalComite(false);
+                                        setNuevoComiteState({ titulo: '', tipo: 'Seguimiento', fechaHora: '', descripcion: '' });
+                                        alert('¡Comité programado con éxito! Las notificaciones automáticas han sido enviadas a los recursos.');
+                                    }
+                                } catch (err) {
+                                    console.error('Error al guardar comité:', err);
+                                    alert('Hubo un error al intentar agendar el comité. Inténtalo de nuevo.');
+                                }
+                            }}
+                            className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl text-slate-100 space-y-4"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                <h3 className="text-lg font-semibold text-emerald-400">📅 Agendar Nuevo Comité</h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarModalComite(false)}
+                                    className="text-slate-400 hover:text-slate-200 text-sm"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">Título del Comité</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={nuevoComiteState.titulo}
+                                    onChange={(e) => setNuevoComiteState({ ...nuevoComiteState, titulo: e.target.value })}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                                    placeholder="Ej: Comité técnico quincenal"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">Tipo</label>
+                                    <input
+                                        type="text"
+                                        value={nuevoComiteState.tipo}
+                                        onChange={(e) => setNuevoComiteState({ ...nuevoComiteState, tipo: e.target.value })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                                        placeholder="Seguimiento"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">Fecha y Hora</label>
+                                    <input
+                                        type="datetime-local"
+                                        required
+                                        value={nuevoComiteState.fechaHora}
+                                        onChange={(e) => setNuevoComiteState({ ...nuevoComiteState, fechaHora: e.target.value })}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium uppercase tracking-wider text-slate-400 mb-1">Descripción</label>
+                                <textarea
+                                    rows={2}
+                                    value={nuevoComiteState.descripcion}
+                                    onChange={(e) => setNuevoComiteState({ ...nuevoComiteState, descripcion: e.target.value })}
+                                    className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-emerald-500 resize-none transition-colors"
+                                    placeholder="Puntos clave a tratar en la reunión..."
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-3 border-t border-slate-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarModalComite(false)}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium text-slate-400 bg-slate-800 hover:bg-slate-700 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 rounded-lg text-sm font-medium text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-colors shadow-lg shadow-emerald-950/50"
+                                >
+                                    Guardar y Notificar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                {/* Renglón exclusivo para el Próximo Comité Programado */}
+                {(() => {
+                    const ahora = new Date();
+                    const comitesFuturos = comites
+                        ? [...comites]
+                            .filter(c => new Date(c.fechaHora) >= ahora)
+                            .sort((a, b) => new Date(a.fechaHora) - new Date(b.fechaHora))
+                        : [];
+
+                    const proximoComite = comitesFuturos.length > 0 ? comitesFuturos[0] : null;
+
+                    return (
+                        <div className="w-full bg-slate-900/90 border border-slate-800 rounded-xl p-4 mb-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3.5">
+                                <div className="p-2.5 rounded-lg bg-purple-950/50 border border-purple-800/40 text-purple-400">
+                                    <Calendar size={20} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-semibold tracking-wider uppercase text-purple-400 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-800/30">
+                                            Próximo Comité
+                                        </span>
+                                        <h3 className="text-sm font-bold text-slate-100">
+                                            {proximoComite ? proximoComite.titulo : 'Sin comités programados'}
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-0.5">
+                                        {proximoComite 
+                                            ? `Tipo: ${proximoComite.tipo} • 📅 ${new Date(proximoComite.fechaHora).toLocaleString('es-ES', { dateStyle: 'full', timeStyle: 'short' })}`
+                                            : 'Utiliza el botón superior de "Agendar Comité" para programar el siguiente seguimiento.'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {proximoComite && (
+                                <button
+                                    onClick={() => {
+                                        const idComite = proximoComite.id || proximoComite.idComite;
+                                        
+                                        if (!idComite) {
+                                            alert('Error: El comité seleccionado no tiene un ID válido.');
+                                            return;
+                                        }
+
+                                        setComiteSeleccionado(proximoComite);
+                                        const fechaFormateada = proximoComite.fechaHora ? new Date(proximoComite.fechaHora).toISOString().slice(0, 16) : '';
+                                        setNuevaFechaHora(fechaFormateada);
+                                        setMostrarModalEditar(true);
+                                    }}
+                                    className="w-full sm:w-auto px-3 py-1.5 rounded-lg text-xs font-medium text-amber-400 bg-amber-950/40 border border-amber-800/50 hover:bg-amber-900/40 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+                                >
+                                    ⚠️ Reprogramar este comité
+                                </button>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 {/* Panel Depuración JSON */}
                 {showDebug && (
@@ -607,7 +962,7 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Fecha de Fin */}
+                    {/* Fecha de Fin Prevista */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <Calendar size={12} /> Fecha Fin Prevista
@@ -627,14 +982,12 @@ const DetalleProyecto = () => {
                         )}
                     </div>
 
-                    {/* Porcentaje de Avance (%) - Ahora Calculado Automáticamente */}
+                    {/* Porcentaje de Avance (%) */}
                     <div className="bg-[#13111C] border border-[#2D2845] p-4 rounded-xl flex flex-col justify-between">
                         <span className="text-[10px] text-[#94A3B8] uppercase tracking-wider font-bold mb-1 flex items-center gap-1">
                             <TrendingUp size={12} /> Porcentaje de Avance (%)
                         </span>
                         {(() => {
-                            // AQUÍ PUEDES AJUSTAR LA LÓGICA DE CÁLCULO SEGÚN TUS DATOS.
-                            // Por ejemplo, si se calcula en base a entregables o si viene directo del proyecto calculado por el backend:
                             const avanceCalculado = Number(proyecto.porcentaje_avance || 0); 
                             
                             return (
