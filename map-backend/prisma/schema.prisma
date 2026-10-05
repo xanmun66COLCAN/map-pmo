@@ -47,7 +47,7 @@ model Proyecto {
 
   // Relaciones
   bitacoras bitacora_seguimiento[]
-  Comite    Comite[]
+  comites    Comite[]
 
   @@map("proyectos")
 }

@@ -153,34 +153,41 @@ const DetalleProyecto = () => {
         }
     };
 
-    // Cargar Proyecto y Bitácora
+    // Cargar Proyecto, Bitácora y Comités
     useEffect(() => {
         let active = true;
         const cargarDatos = async () => {
             try {
                 setLoading(true);
-                const [resProyecto, resBitacora] = await Promise.all([
+                const [resProyecto, resBitacora, resComites] = await Promise.all([
                     api.get(`/proyectos/${id}`),
-                    api.get(`/proyectos/${id}/bitacora`).catch(() => ({ data: { data: [] } }))
+                    api.get(`/proyectos/${id}/bitacora`).catch(() => ({ data: { data: [] } })),
+                    api.get(`/comites?idProyecto=${id}`).catch(() => ({ data: { data: [] } }))
                 ]);
 
                 if (!active) return;
                 
                 const datosProyecto = resProyecto.data?.data || resProyecto.data;
                 const datosBitacora = resBitacora.data?.data || resBitacora.data || [];
+                
+                // Fallback resiliente para recuperar comités:
+                // 1. Revisa resComites
+                // 2. Revisa datosProyecto.comites (minúscula)
+                // 3. Revisa datosProyecto.Comite (mayúscula original)
+                const datosComites = 
+                    (resComites.data?.data || resComites.data || []).length > 0
+                        ? (resComites.data?.data || resComites.data)
+                        : (datosProyecto.comites || datosProyecto.Comite || []);
 
                 setProyecto(datosProyecto);
                 setFormData(datosProyecto);
                 setBitacora(datosBitacora);
+                setComites(Array.isArray(datosComites) ? datosComites : []);
                 setError("");
             } catch (err) {
                 if (!active) return;
                 const mensaje = err.response?.data?.message || err.response?.data?.error || err.message;
                 setError(mensaje || "No se pudo obtener la información de la iniciativa.");
-                if (err.response?.status === 401 || err.response?.status === 403) {
-                    localStorage.clear();
-                    navigate("/");
-                }
             } finally {
                 if (active) setLoading(false);
             }

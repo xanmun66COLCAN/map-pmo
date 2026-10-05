@@ -109,44 +109,40 @@ export const getProyectosDashboard = async (_req: Request, res: Response): Promi
   }
 };
 
-// GET ALL
-export const getProyectos = async (req: Request, res: Response): Promise<void> => {
+// GET ALL: Obtener lista completa de proyectos (resuelve la importación de `getProyectos` en proyecto.routes.ts)
+export const getProyectos = async (_req: Request, res: Response): Promise<void> => {
   try {
     const proyectos = await prisma.proyecto.findMany({
       include: {
-        Comite: true, // 👈 Si falta esto, comite llega como undefined
+        Comite: {
+          orderBy: {
+            fechaHora: 'asc',
+          },
+        },
+        bitacoras: true,
+      },
+      orderBy: {
+        creado_en: 'desc',
       },
     });
-    
-    let evaluaciones: any[] = [];
-    try {
-      evaluaciones = await prisma.$queryRaw`SELECT * FROM evaluacion_multicriterio` as any[];
-    } catch (e) {
-      evaluaciones = [];
-    }
 
-    const resultado = proyectos.map((p: any) => {
-      const evalMC = evaluaciones.find((e: any) => String(e.proyecto_id) === String(p.id));
-      const presupuestoNum = Number(p.presupuesto || 0);
-      const costoRealNum = Number(p.costo_real || 0);
+    const proyectosFormateados = proyectos.map((proyecto: any) => {
+      const presupuestoNum = Number(proyecto.presupuesto || 0);
+      const costoRealNum = Number(proyecto.costo_real || 0);
       const tieneDesviacion = costoRealNum > presupuestoNum;
-      
+
       return {
-        ...p,
-        porcentaje_avance: calcularAvanceAutomatico(p.fecha_inicio, p.fecha_fin, p.estado),
-        puntaje_global: evalMC ? evalMC.puntaje_global : (p.puntaje_global ?? null),
+        ...proyecto,
+        comites: proyecto.Comite || [],
+        porcentaje_avance: calcularAvanceAutomatico(proyecto.fecha_inicio, proyecto.fecha_fin, proyecto.estado),
         alerta_desviacion_negativa: tieneDesviacion,
         diferencia_presupuesto: presupuestoNum - costoRealNum,
-        mensaje_desviacion: tieneDesviacion 
-          ? `⚠️ Alerta: El costo real ($${costoRealNum.toLocaleString()}) supera el presupuesto planeado ($${presupuestoNum.toLocaleString()}).` 
-          : 'Presupuesto saludable'
       };
     });
 
-    res.json(resultado);
+    res.status(200).json({ success: true, data: proyectosFormateados });
   } catch (error: any) {
-    console.error('Error en getProyectos:', error);
-    res.status(500).json({ message: 'Error al obtener proyectos', error: error.message });
+    res.status(500).json({ success: false, message: 'Error al obtener proyectos.', error: error.message });
   }
 };
 
@@ -156,6 +152,14 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
   try {
     const proyecto: any = await prisma.proyecto.findUnique({
       where: { id },
+      include: {
+        Comite: {
+          orderBy: {
+            fechaHora: 'asc', // Ordena los comités cronológicamente
+          },
+        },
+        bitacoras: true,     // Incluimos de paso las bitácoras para mantener consistencia
+      },
     });
 
     if (!proyecto) {
@@ -169,6 +173,8 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
 
     const proyectoFormateado = {
       ...proyecto,
+      // Mapeamos 'Comite' a 'comites' para que en el Frontend no haya problemas de minúsculas/mayúsculas
+      comites: proyecto.Comite || [],
       porcentaje_avance: calcularAvanceAutomatico(proyecto.fecha_inicio, proyecto.fecha_fin, proyecto.estado),
       alerta_desviacion_negativa: tieneDesviacion,
       diferencia_presupuesto: presupuestoNum - costoRealNum,
@@ -185,7 +191,7 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
 
     res.status(200).json({ success: true, data: proyectoFormateado });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
