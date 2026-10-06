@@ -20,4 +20,6 @@ router.get('/proyecto/:idProyecto', obtenerComitesPorProyecto);
 // 🟢 2. Agrega esta línea para permitir la reprogramación por ID
 router.put('/:id', verificarToken, actualizarComite);
 
+router.post('/proyecto/:idProyecto', agendarComite);
+
 export default router;
