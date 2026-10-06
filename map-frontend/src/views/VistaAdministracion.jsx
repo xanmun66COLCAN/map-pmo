@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { UserPlus, ShieldCheck, FileText, Users, AlertCircle, CheckCircle2 } from 'lucide-react';
-import api from '../api/axiosInstance'; // 👈 Instancia centralizada con interceptores
+import api from '../api/axiosInstance';
 
 const VistaAdministracion = () => {
-  // 👇 Cambiamos el estado inicial de 'usuarios' a 'auditoria' para que abra por defecto
   const [tabActiva, setTabActiva] = useState('auditoria');
 
   // Estados del formulario de creación de usuario
@@ -28,7 +27,7 @@ const VistaAdministracion = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [errorLogs, setErrorLogs] = useState(null);
 
-  // Cargar datos al cambiar de pestaña (y como 'auditoria' es la inicial, ejecutará esta lógica al montar si es necesario)
+  // Cargar datos al cambiar de pestaña
   useEffect(() => {
     if (tabActiva === 'gestion') {
       obtenerUsuariosActivos();
@@ -37,7 +36,7 @@ const VistaAdministracion = () => {
     }
   }, [tabActiva]);
 
-  // 📋 Obtener lista de usuarios activos para cambiar roles
+  // 📋 Obtener lista de usuarios activos
   const obtenerUsuariosActivos = async () => {
     setLoadingLista(true);
     setErrorLista(null);
@@ -57,22 +56,18 @@ const VistaAdministracion = () => {
     try {
       await api.put(`/admin/usuarios/${idUsuario}/rol`, { id_rol: Number(nuevoIdRol) });
       setMensajeRol('¡Rol actualizado exitosamente!');
-      obtenerUsuariosActivos(); // Recargamos la tabla
+      obtenerUsuariosActivos();
     } catch (err) {
       setErrorLista(err.response?.data?.message || 'Error al actualizar el rol.');
     }
   };
 
-  // 📊 Obtener logs de auditoría corrigiendo la extracción del array
+  // 📊 Obtener logs de auditoría
   const obtenerLogsAuditoria = async () => {
     setLoadingLogs(true);
     setErrorLogs(null);
     try {
       const response = await api.get(`/proyectos/auditoria/logs?_t=${new Date().getTime()}`);
-      
-      console.log("📦 RESPUESTA CRUDA DE AUDITORÍA:", response.data);
-
-      // 👇 Extraemos correctamente el array desde response.data.data
       const datosLogs = response.data.data || response.data.logs || response.data;
       setLogs(Array.isArray(datosLogs) ? datosLogs : []);
     } catch (err) {
@@ -93,6 +88,7 @@ const VistaAdministracion = () => {
       await api.post('/admin/usuarios', formData);
       setMensajeUsuario('¡Usuario creado exitosamente con contraseña cifrada!');
       setFormData({ nombre: '', correo: '', contrasena: '', id_rol: '2' });
+      obtenerUsuariosActivos(); // Sincroniza la lista
     } catch (err) {
       setErrorUsuario(err.response?.data?.message || 'Error al registrar el usuario.');
     } finally {
@@ -116,7 +112,6 @@ const VistaAdministracion = () => {
 
         {/* Pestañas de Navegación Interna */}
         <div className="flex bg-[#13111C] p-1 rounded-xl border border-[#2D2845] gap-1">
-          
           <button
             onClick={() => setTabActiva('auditoria')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all ${
@@ -152,7 +147,6 @@ const VistaAdministracion = () => {
             <Users className="w-4 h-4" />
             <span>Gestión de Roles</span>
           </button>
-
         </div>
       </div>
 
@@ -245,7 +239,7 @@ const VistaAdministracion = () => {
         </div>
       )}
 
-      {/* Contenido Pestaña 2: Gestión de Roles (Usuarios Activos) */}
+      {/* Contenido Pestaña 2: Gestión de Roles */}
       {tabActiva === 'gestion' && (
         <div className="bg-[#13111C] border border-[#2D2845] rounded-2xl p-6 shadow-xl">
           <div className="flex justify-between items-center mb-6">
@@ -304,7 +298,7 @@ const VistaAdministracion = () => {
                         </td>
                         <td className="py-3 px-4 text-center">
                           <select
-                            defaultValue={u.id_rol}
+                            value={u.id_rol}
                             onChange={(e) => handleCambiarRol(u.id, e.target.value)}
                             className="bg-[#0B0A0F] border border-[#2D2845] rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-purple-500"
                           >

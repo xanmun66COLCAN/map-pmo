@@ -309,12 +309,37 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       alerta_desviacion_negativa,
       diferencia_presupuesto,
       mensaje_desviacion,
+      // ⚠️ EXTRAER Y OMITIR ID_USUARIO Y RELACIONES DE PRISMA:
+      id_usuario,
+      usuario,
+      Comite,
+      comites,
+      bitacoras,
+      solicitudes_cambio,
+      metricas,
+      puntos_salud,
+      kpis,
+      entregables,
+      logs_auditoria,
       ...rest 
     } = req.body;
 
     const dataToUpdate: any = { ...rest };
 
-    if (puntaje_global !== undefined && puntaje_global !== '') {
+    // Sanitización explícita sobre el objeto final
+    delete dataToUpdate.id_usuario;
+    delete dataToUpdate.usuario;
+    delete dataToUpdate.Comite;
+    delete dataToUpdate.comites;
+    delete dataToUpdate.bitacoras;
+    delete dataToUpdate.solicitudes_cambio;
+    delete dataToUpdate.metricas;
+    delete dataToUpdate.puntos_salud;
+    delete dataToUpdate.kpis;
+    delete dataToUpdate.entregables;
+    delete dataToUpdate.logs_auditoria;
+
+    if (puntaje_global !== undefined && puntaje_global !== null && puntaje_global !== '') {
       dataToUpdate.puntaje_global = Number(puntaje_global);
     }
 
@@ -325,10 +350,10 @@ export const updateProyecto = async (req: AuthRequest, res: Response): Promise<v
       dataToUpdate.fecha_fin = new Date(fecha_fin);
     }
 
-    if (presupuesto !== undefined && presupuesto !== '') {
+    if (presupuesto !== undefined && presupuesto !== null && presupuesto !== '') {
       dataToUpdate.presupuesto = Number(presupuesto);
     }
-    if (costo_real !== undefined && costo_real !== '') {
+    if (costo_real !== undefined && costo_real !== null && costo_real !== '') {
       dataToUpdate.costo_real = Number(costo_real);
     } 
 

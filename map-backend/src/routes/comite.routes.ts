@@ -8,6 +8,9 @@ import verificarToken from '../middlewares/auth.middleware'; // O la ruta donde 
 
 const router = Router();
 
+// Redirige GET /api/comites al controlador de comités
+router.get('/', obtenerComitesPorProyecto);
+
 // Ruta para crear/agendar un comité (POST)
 router.post('/', agendarComite);
 

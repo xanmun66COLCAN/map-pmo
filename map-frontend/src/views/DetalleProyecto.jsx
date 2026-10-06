@@ -479,7 +479,7 @@ const DetalleProyecto = () => {
                             onSubmit={async (e) => {
                                 e.preventDefault();
                                 try {
-                                    const res = await api.post('/comites', {
+                                    const res = await api.post(`/comites/proyecto/${id}`,{
                                         ...nuevoComiteState,
                                         idProyecto: proyecto?.id,
                                         id_usuario: idUsuarioReal, // 👈 Identidad enviada a auditoría

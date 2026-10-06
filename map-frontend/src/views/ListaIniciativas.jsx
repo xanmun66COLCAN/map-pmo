@@ -29,6 +29,7 @@ const ListaIniciativas = () => {
     try {
       setCargando(true);
       setError(null);
+      // ✅ CORRECTO: Llama a la ruta global de proyectos
       const response = await api.get('/proyectos');
       const listaExtraida = extraerLista(response.data);
       setIniciativas(listaExtraida);

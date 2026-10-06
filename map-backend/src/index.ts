@@ -7,6 +7,7 @@ import dashboardRoutes from './routes/dashboardRoutes';
 import adminRoutes from './routes/admin.routes';
 import kpiRoutes from './routes/kpi.routes';
 import comitesRoutes from './routes/comite.routes'; // 👈 1. Importa las rutas de comités
+import comiteRoutes from './routes/comite.routes';
 
 // Configuración de variables de entorno
 dotenv.config();
@@ -34,8 +35,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/kpis', kpiRoutes);
 
 // 📅 6. Rutas de Comités y Notificaciones Automáticas
-app.use('/api/comites', comitesRoutes); // 👈 2. Monta las rutas de comités aquí
-
+app.use('/api/comites', comiteRoutes);
 // Ruta de prueba inicial para verificar el estado del servidor
 app.get('/', (req: Request, res: Response) => {
   res.send('🚀 Servidor de MAP-PMO funcionando correctamente');
