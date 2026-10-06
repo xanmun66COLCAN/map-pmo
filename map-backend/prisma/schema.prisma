@@ -47,7 +47,7 @@ model Proyecto {
 
   // Relaciones
   bitacoras bitacora_seguimiento[]
-  comites    Comite[]
+  comites    Comite[] 
 
   @@map("proyectos")
 }
@@ -176,4 +176,21 @@ model Notificacion {
   usuario Usuario? @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
 
   @@map("notificaciones")
+}
+
+model AsignacionRecurso {
+  id                    Int       @id @default(autoincrement())
+  id_proyecto          String
+  id_usuario           Int
+  rol_proyecto         String    // Ej: "Project Manager", "Desarrollador Lead", "UX Designer"
+  porcentaje_dedicacion Int       @default(100) // % de tiempo (ej: 25, 50, 100)
+  fecha_inicio         DateTime?
+  fecha_fin            DateTime?
+  creado_en            DateTime  @default(now())
+
+  // Relaciones
+  proyecto             Proyecto  @relation(fields: [id_proyecto], references: [id], onDelete: Cascade)
+  usuario              Usuario   @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
+
+  @@map("asignaciones_recursos")
 }

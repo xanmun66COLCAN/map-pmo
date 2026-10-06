@@ -114,7 +114,7 @@ export const getProyectos = async (_req: Request, res: Response): Promise<void> 
   try {
     const proyectos = await prisma.proyecto.findMany({
       include: {
-        Comite: {
+        comites: {
           orderBy: {
             fechaHora: 'asc',
           },
@@ -153,7 +153,7 @@ export const getProyectoById = async (req: AuthRequest, res: Response): Promise<
     const proyecto: any = await prisma.proyecto.findUnique({
       where: { id },
       include: {
-        Comite: {
+        comites: {
           orderBy: {
             fechaHora: 'asc', // Ordena los comités cronológicamente
           },
