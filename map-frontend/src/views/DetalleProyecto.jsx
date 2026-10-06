@@ -5,6 +5,7 @@ import api from "../api/axiosInstance.js";
 import SeccionKpis from "../components/SeccionKpis.jsx";
 import EvaluacionMulticriterio from "../components/EvaluacionMulticriterio.jsx";
 import ReporteEjecutivoModal from "../components/ReporteEjecutivoModal.jsx";
+import GestionRecursos from '../components/GestionRecursos';
 
 const DetalleProyecto = () => {
     const { id } = useParams();
@@ -91,7 +92,7 @@ const DetalleProyecto = () => {
         descripcion: ''
     });
     const [guardandoKpi, setGuardandoKpi] = useState(false);
-    
+
     // Funciones para KPIs
     const handleEditarKpi = async (kpiId, kpiActualizado) => {
         try {
@@ -294,6 +295,7 @@ const DetalleProyecto = () => {
                     </button>
 
                     {/* Cabecera con Título, ID y Botones de Acción Global */}
+                    
                     <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-4 w-full">
                         <div>
                             <h1 className="text-xl font-bold text-slate-100">{proyecto?.nombre || 'Detalle del Proyecto'}</h1>
@@ -1215,6 +1217,15 @@ const DetalleProyecto = () => {
                     onClose={() => setMostrarModalReporte(false)} 
                 />
             )}
+            {/* 2. AGREGAS LA SECCIÓN DE RECURSOS AQUÍ ABAJO */}
+            <section className="pt-4 border-t border-[#2D2845]">
+                <h2 className="text-lg font-bold mb-4 text-[#A855F7]">Gestión de Equipo y Recursos</h2>
+                
+                <GestionRecursos 
+                idProyecto={id} 
+                tienePrivilegios={true} // o la variable con la que evalúas el rol del usuario
+                />
+            </section>
         </div>
     );
 };
