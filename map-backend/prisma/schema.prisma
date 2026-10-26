@@ -8,46 +8,47 @@ datasource db {
 }
 
 model Usuario {
-  id             Int                    @id @default(autoincrement())
-  nombre         String                 @db.VarChar(100)
-  contrasena     String                 @db.VarChar(255)
-  correo         String                 @unique @db.VarChar(100)
-  fecha_creacion DateTime?              @default(now()) @db.Timestamp(6)
-  id_rol         Int?
-  asignaciones   AsignacionRecurso[]
-  logs_auditoria logs_auditoria[]
-  roles          roles?                 @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
-  bitacoras      bitacora_seguimiento[]
-  Notificacion   Notificacion[]
+  id              Int       @id @default(autoincrement())
+  nombre          String    @db.VarChar(100)
+  contrasena      String    @db.VarChar(255)
+  correo          String    @unique @db.VarChar(100)
+  fecha_creacion DateTime?  @default(now()) @db.Timestamp(6)
+  id_rol          Int?
+  asignaciones    AsignacionRecurso[]
+  logs_auditoria  logs_auditoria[]
+  roles           roles?    @relation(fields: [id_rol], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  bitacoras       bitacora_seguimiento[]
+  Notificacion    Notificacion[]
 
   @@map("usuarios")
 }
 
 model Proyecto {
-  id                String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  codigo            String               @unique @db.VarChar(20)
-  nombre            String               @db.VarChar(150)
-  descripcion       String?
-  estado            estado_proyecto_enum @default(Caso_de_Negocio)
-  departamento      String               @db.VarChar(100)
-  lider_proyecto    String               @db.VarChar(100)
-  project_manager   String?              @db.VarChar(100)
-  presupuesto       Decimal              @default(0.00) @db.Decimal(12, 2)
-  costo_real        Decimal              @default(0.00) @db.Decimal(12, 2)
-  porcentaje_avance Int                  @default(0)
-  fecha_inicio      DateTime             @db.Date
-  fecha_fin         DateTime             @db.Date
-  creado_en         DateTime?            @default(now()) @db.Timestamptz(6)
-  actualizado_en    DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
-  alineacion        Int                  @default(5)
-  beneficio         Int                  @default(5)
-  costo             Int                  @default(5)
-  puntaje_global    Decimal              @default(5.00) @db.Decimal(5, 2)
-  riesgo            Int                  @default(5)
+  id               String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  codigo           String               @unique @db.VarChar(20)
+  nombre           String               @db.VarChar(150)
+  descripcion      String?
+  estado           estado_proyecto_enum @default(Caso_de_Negocio)
+  departamento     String               @db.VarChar(100)
+  lider_proyecto   String               @db.VarChar(100)
+  project_manager  String?              @db.VarChar(100)
+  presupuesto      Decimal              @default(0.00) @db.Decimal(12, 2)
+  costo_real       Decimal              @default(0.00) @db.Decimal(12, 2)
+  porcentaje_avance Int                 @default(0)
+  fecha_inicio     DateTime             @db.Date
+  fecha_fin        DateTime             @db.Date
+  creado_en        DateTime?            @default(now()) @db.Timestamptz(6)
+  actualizado_en   DateTime?            @default(now()) @updatedAt @db.Timestamptz(6)
+  alineacion       Int                  @default(5)
+  beneficio        Int                  @default(5)
+  costo            Int                  @default(5)
+  puntaje_global   Decimal              @default(5.00) @db.Decimal(5, 2)
+  riesgo           Int                  @default(5)
 
   // Relaciones
-  bitacoras bitacora_seguimiento[]
-  comites    Comite[] 
+  bitacoras        bitacora_seguimiento[]
+  comites          Comite[] 
+  asignaciones     AsignacionRecurso[]
 
   @@map("proyectos")
 }
@@ -78,6 +79,8 @@ model AsignacionRecurso {
   fecha_hasta           DateTime? @db.Date
   created_at            DateTime? @default(now()) @db.Timestamptz(6)
   rol                   String?
+  
+  proyecto              Proyecto  @relation(fields: [proyecto_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   usuario               Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([proyecto_id], map: "idx_asignaciones_proyecto")
@@ -176,21 +179,4 @@ model Notificacion {
   usuario Usuario? @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
 
   @@map("notificaciones")
-}
-
-model AsignacionRecurso {
-  id                    Int       @id @default(autoincrement())
-  id_proyecto          String
-  id_usuario           Int
-  rol_proyecto         String    // Ej: "Project Manager", "Desarrollador Lead", "UX Designer"
-  porcentaje_dedicacion Int       @default(100) // % de tiempo (ej: 25, 50, 100)
-  fecha_inicio         DateTime?
-  fecha_fin            DateTime?
-  creado_en            DateTime  @default(now())
-
-  // Relaciones
-  proyecto             Proyecto  @relation(fields: [id_proyecto], references: [id], onDelete: Cascade)
-  usuario              Usuario   @relation(fields: [id_usuario], references: [id], onDelete: Cascade)
-
-  @@map("asignaciones_recursos")
 }
