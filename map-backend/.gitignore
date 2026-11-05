@@ -1,0 +1,16 @@
+# Dependencias
+node_modules/
+.pnp
+.pnp.js
+
+# Variables de entorno / Secretos
+.env
+.env.local
+.env.development.local
+
+# Archivos del sistema Mac
+.DS_Store
+
+# Carpetas de compilación de producción
+build/
+dist/
