@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout 
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/pmo_bg_dark">
+
+    <!-- Header Superior -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/pmo_surface"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Rol: Administrador"
+                android:textColor="@color/pmo_accent"
+                android:textStyle="bold"
+                android:textSize="14sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Panel General de Control"
+                android:textColor="@color/pmo_text_secondary"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Salir"
+            android:textSize="12sp"
+            android:textColor="#F87171"
+            android:backgroundTint="#1F2937"
+            android:textAllCaps="false"/>
+    </LinearLayout>
+
+    <!-- Contenido Scrollable -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Resumen Ejecutivo -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="RESUMEN EJECUTIVO"
+                    android:textColor="@color/pmo_primary"
+                    android:textSize="11sp"
+                    android:textStyle="bold"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="@color/pmo_surface_alt"
+                        android:padding="12dp"
+                        android:gravity="center"
+                        android:layout_marginEnd="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="10"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/pmo_accent"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Iniciativas Totales"
+                            android:textSize="11sp"
+                            android:textColor="@color/pmo_text_secondary"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:background="@color/pmo_surface_alt"
+                        android:padding="12dp"
+                        android:gravity="center"
+                        android:layout_marginStart="6dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="85%"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/pmo_primary"/>
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Avance Promedio"
+                            android:textSize="11sp"
+                            android:textColor="@color/pmo_text_secondary"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Sección: 4 ÚLTIMAS INICIATIVAS -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ÚLTIMAS INICIATIVAS (Toca para ver detalle)"
+                android:textColor="@color/pmo_text_secondary"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp"/>
+
+            <!-- Iniciativa 1 (Clic -> Detalle) -->
+            <LinearLayout
+                android:id="@+id/cardInitiativeDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp"
+                android:clickable="true"
+                android:focusable="true">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="INI-001: Plataforma Logística Inteligente"
+                        android:textColor="@color/pmo_text_primary"
+                        android:textStyle="bold"
+                        android:textSize="13sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="En Curso"
+                        android:textColor="@color/pmo_accent"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PM: A. Muñoz • Presupuesto: \$45,000 USD"
+                    android:textColor="@color/pmo_text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Iniciativa 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="INI-002: Optimización de Montajes Mecánicos"
+                        android:textColor="@color/pmo_text_primary"
+                        android:textStyle="bold"
+                        android:textSize="13sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Aprobado"
+                        android:textColor="#34D399"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PM: C. Gómez • Presupuesto: \$28,000 USD"
+                    android:textColor="@color/pmo_text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Iniciativa 3 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="12dp"
+                android:layout_marginBottom="8dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="INI-003: Migración Base de Datos Cloud"
+                        android:textColor="@color/pmo_text_primary"
+                        android:textStyle="bold"
+                        android:textSize="13sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Evaluación"
+                        android:textColor="#FBBF24"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PM: R. Silva • Presupuesto: \$60,000 USD"
+                    android:textColor="@color/pmo_text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- Iniciativa 4 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="12dp"
+                android:layout_marginBottom="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="INI-004: Automatización CI/CD"
+                        android:textColor="@color/pmo_text_primary"
+                        android:textStyle="bold"
+                        android:textSize="13sp"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="En Curso"
+                        android:textColor="@color/pmo_accent"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
+                </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PM: E. Martínez • Presupuesto: \$15,000 USD"
+                    android:textColor="@color/pmo_text_secondary"
+                    android:textSize="11sp"
+                    android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Barra de Navegación Inferior (Iniciativas + Logs) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:orientation="horizontal"
+        android:background="@color/pmo_surface"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="🏠\nInicio"
+            android:gravity="center"
+            android:textSize="11sp"
+            android:textColor="@color/pmo_accent"/>
+
+        <TextView
+            android:id="@+id/navCommittees"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="📋\nIniciativas"
+            android:gravity="center"
+            android:textSize="11sp"
+            android:textColor="@color/pmo_text_secondary"/>
+
+        <TextView
+            android:id="@+id/navLogs"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="⚙️\nLogs"
+            android:gravity="center"
+            android:textSize="11sp"
+            android:textColor="@color/pmo_text_secondary"/>
+    </LinearLayout>
+
+</LinearLayout>

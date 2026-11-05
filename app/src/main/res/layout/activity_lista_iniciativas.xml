@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/pmo_bg_dark">
+
+    <!-- Header -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/pmo_surface"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📋 Banco de Iniciativas PMO (10)"
+            android:textColor="@color/pmo_text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- INICIATIVA 1 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-001: Plataforma Logística Inteligente" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: A. Muñoz • Responsable: D. Torres" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 15/01/2026 - 30/11/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $45,000 USD • Estado: En Curso" android:textColor="@color/pmo_accent" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 2 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-002: Optimización de Montajes Mecánicos" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: C. Gómez • Responsable: M. Ramos" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 01/02/2026 - 15/08/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $28,000 USD • Estado: Aprobado" android:textColor="#34D399" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 3 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-003: Migración Base de Datos Cloud" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: R. Silva • Responsable: Soporte TI" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 10/03/2026 - 20/12/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $60,000 USD • Estado: Evaluación" android:textColor="#FBBF24" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 4 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-004: Automatización CI/CD" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: E. Martínez • Responsable: DevOps Team" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 01/04/2026 - 30/09/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $15,000 USD • Estado: En Curso" android:textColor="@color/pmo_accent" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 5 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-005: Sistema de Control de Calidad" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: L. Fernández • Responsable: Auditoría QA" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 05/05/2026 - 15/10/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $32,000 USD • Estado: Planificación" android:textColor="#FBBF24" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 6 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-006: Rediseño Portal Clientes" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: H. López • Responsable: Equipo UX" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 12/01/2026 - 28/05/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $22,000 USD • Estado: Finalizado" android:textColor="#34D399" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 7 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-007: Ciberseguridad ISO 27001" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: G. Vargas • Responsable: SecOps" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 01/06/2026 - 30/12/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $50,000 USD • Estado: En Curso" android:textColor="@color/pmo_accent" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 8 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-008: Implementación ERP SAP" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: A. Muñoz • Responsable: Finanzas" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 01/07/2026 - 31/03/2027" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $120,000 USD • Estado: Aprobado" android:textColor="#34D399" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 9 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-009: Capacitación Metodología Agile" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: K. Rios • Responsable: RRHH" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 10/08/2026 - 15/11/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $10,000 USD • Estado: En Curso" android:textColor="@color/pmo_accent" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+            <!-- INICIATIVA 10 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@color/pmo_surface"
+                android:padding="14dp"
+                android:layout_marginBottom="10dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="INI-010: App Móvil Nativa Android" android:textColor="@color/pmo_text_primary" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="PM: A. Muñoz • Responsable: SENA Dev Team" android:textColor="@color/pmo_text_secondary" android:textSize="11sp" android:layout_marginTop="2dp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Fechas: 01/09/2026 - 30/11/2026" android:textColor="@color/pmo_text_secondary" android:textSize="11sp"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto: $18,000 USD • Estado: En Curso" android:textColor="@color/pmo_accent" android:textStyle="bold" android:textSize="11sp" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>
